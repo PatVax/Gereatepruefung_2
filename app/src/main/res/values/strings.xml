@@ -1,3 +1,9 @@
 <resources>
-    <string name="app_name">Gereatepruefung_2</string>
+    <string name="app_name">Zentralwerkstatt-Prüfung</string>
+
+    <string name="login_button_text">Einloggen</string>
+    <string name="pruefen_button_text">Prüfen</string>
+    <string name="verbindung_button_text">Verbindungs-Einstellungen</string>
+    <string name="einstellungen_button_text">Scanner-Einstellungen</string>
+    <string name="sync_button_text">Synchronisieren</string>
 </resources>

@@ -4,4 +4,10 @@
     <dimen name="main_activity_margin">45dp</dimen>
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
+    <dimen name="popup_fragment_margin">16dp</dimen>
+    <dimen name="popup_fragment_text_size">20sp</dimen>
+    <dimen name="list_activity_check_box_text_size">32sp</dimen>
+    <dimen name="list_activity_info_text_size">32sp</dimen>
+    <dimen name="list_activity_margin">16dp</dimen>
+    <dimen name="list_activity_text_size">20sp</dimen>
 </resources>

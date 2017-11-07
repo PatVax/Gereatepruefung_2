@@ -6,4 +6,26 @@
     <string name="verbindung_button_text">Verbindungs-Einstellungen</string>
     <string name="einstellungen_button_text">Scanner-Einstellungen</string>
     <string name="sync_button_text">Synchronisieren</string>
+    <string name="benutzerButton">Benutzer ändern</string>
+    <string name="benutzerEditTextHint">Benutzername eingeben</string>
+    <string name="cancelVerbindungButton">Verwerfen</string>
+    <string name="checkAllButtonText">Alle ankreuzen</string>
+    <string name="eintellungen_button_text">Scanner-Einstellungen</string>
+    <string name="hostEditTextHint">Host-Adresse eingeben http://... oder https://...</string>
+    <string name="hostTextView">Host:</string>
+    <string name="list_geraet_text">Gerätetyp:</string>
+    <string name="list_hersteller_text">Hersteller:</string>
+    <string name="menu_barcode">Manuelle Eingabe</string>
+    <string name="menu_manuelleEingabe">Manuelle Eingabe</string>
+    <string name="offlineModeCheckBoxText">Offline-Modus einschalten</string>
+    <string name="passwortButton">Einloggen</string>
+    <string name="passwortEditTextHint">Passwort eingeben</string>
+    <string name="pfadEditTextHint">Dateipfad eingeben</string>
+    <string name="pfadTextView">Pfad:</string>
+    <string name="rootEditTextHint">Root-Passwort eingeben</string>
+    <string name="rootTextView">Root-Passwort:</string>
+    <string name="showMessageCheckBoxText">Verbindungsmitteilungen anzeigen</string>
+    <string name="submitButtonText">Ergbenisse senden</string>
+    <string name="acceptVerbindungButton">Übernehmen</string>
+    <string name="bemerkungenButtonText">Bemerkungen</string>
 </resources>

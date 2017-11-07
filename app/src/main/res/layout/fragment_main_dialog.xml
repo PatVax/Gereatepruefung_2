@@ -1,0 +1,18 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="horizontal"
+    android:background="@color/popupFragmentBackgroundColor"
+    android:padding="10dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_weight="1.0">
+        <EditText android:textSize="@dimen/popup_fragment_text_size" android:id="@+id/benutzerEditText" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/benutzerEditTextHint" android:singleLine="true" android:selectAllOnFocus="true" android:inputType="text|textCapCharacters|textCapWords|textCapSentences|textAutoCorrect|textAutoComplete|textMultiLine|textImeMultiLine|textNoSuggestions|textUri|textEmailAddress|textEmailSubject|textShortMessage|textLongMessage|textPersonName|textPostalAddress|textPassword|textVisiblePassword|textWebEditText|textFilter|textPhonetic|textWebEmailAddress|textWebPassword|phone|time" />
+        <EditText android:textSize="@dimen/popup_fragment_text_size" android:id="@+id/passwortEditText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/popup_fragment_margin" android:hint="@string/passwortEditTextHint" android:singleLine="true" android:selectAllOnFocus="true" android:inputType="text|textCapCharacters|textCapWords|textCapSentences|textAutoCorrect|textAutoComplete|textMultiLine|textImeMultiLine|textNoSuggestions|textUri|textEmailAddress|textEmailSubject|textShortMessage|textLongMessage|textPersonName|textPostalAddress|textPassword|textVisiblePassword|textWebEditText|textFilter|textPhonetic|textWebEmailAddress|textWebPassword|phone" android:imeOptions="actionGo|actionSearch|actionSend|actionNext|actionDone|actionPrevious" />
+    </LinearLayout>
+    <LinearLayout android:orientation="vertical" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_weight="0.0">
+        <Button android:textSize="@dimen/popup_fragment_text_size" android:id="@+id/benutzerButton" android:background="@drawable/round_button_drawable" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/benutzerButton" android:onClick="onClick" />
+        <Button android:textSize="@dimen/popup_fragment_text_size" android:id="@+id/passwortButton" android:background="@drawable/round_button_drawable" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/popup_fragment_margin" android:text="@string/passwortButton" android:onClick="onClick" />
+    </LinearLayout>
+
+</LinearLayout>

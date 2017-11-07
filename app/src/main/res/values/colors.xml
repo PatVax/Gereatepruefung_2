@@ -8,4 +8,6 @@
     <color name="transparent">#00000000</color>
     <color name="backgroundDisabled">#777777</color>
     <color name="backgroundEnabled">#ffffff</color>
+    <color name="popupFragmentBackgroundColor">#b999494c</color>
+    <color name="listBackground">#dcdcdc</color>
 </resources>

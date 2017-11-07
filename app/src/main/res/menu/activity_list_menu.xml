@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:icon="@mipmap/ic_action_prev_list" android:id="@+id/menu_previousList" android:visible="true" android:orderInCategory="1" android:title="Vorherige Prüfliste" app:showAsAction="always" />
+    <item android:icon="@mipmap/ic_action_next_list" android:id="@+id/menu_nextList" android:visible="true" android:orderInCategory="2" android:title="Nächste Prüfliste" app:showAsAction="always" />
+    <item android:icon="@drawable/ic_action_slide_up" android:id="@+id/menu_hideHeader" android:visible="true" android:orderInCategory="3" android:title="Header Verbergen" app:showAsAction="always" />
+    <item android:icon="@drawable/ic_action_slide_down" android:id="@+id/menu_showHeader" android:visible="false" android:orderInCategory="4" android:title="Header Anzeigen" app:showAsAction="always" />
+</menu>

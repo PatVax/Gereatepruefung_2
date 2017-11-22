@@ -1,13 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:background="@color/listBackground" android:layout_width="match_parent" android:layout_height="wrap_content">
-<LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="@dimen/list_activity_margin">
-<TextView android:textSize="@dimen/list_activity_text_size" android:id="@+id/geraetetypTextViewLeft" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/list_geraet_text" android:layout_weight="0.0" />
-<TextView android:textSize="@dimen/list_activity_text_size" android:gravity="left|right|center_horizontal|fill_horizontal|center|fill|start|end" android:id="@+id/geraetetypTextViewRight" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:layout_weight="1.0" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:background="@color/listBackground"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+<LinearLayout android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="@dimen/list_activity_margin">
+<TextView android:textSize="@dimen/list_activity_text_size"
+    android:id="@+id/geraetetypTextViewLeft"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="@string/list_geraet_text"
+    android:layout_weight="0.0" />
+<TextView android:textSize="@dimen/list_activity_text_size"
+    android:gravity="end"
+    android:id="@+id/geraetetypTextViewRight"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text=""
+    android:layout_weight="1.0" />
 </LinearLayout>
-<LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="@dimen/list_activity_margin">
-<TextView android:textSize="@dimen/list_activity_text_size" android:id="@+id/herstellerTextViewLeft" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/list_hersteller_text" android:layout_weight="0.0" />
-<TextView android:textSize="@dimen/list_activity_text_size" android:gravity="left|right|center_horizontal|fill_horizontal|center|fill|start|end" android:id="@+id/herstellerTextViewRight" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:layout_weight="1.0" />
+<LinearLayout android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="@dimen/list_activity_margin">
+<TextView android:textSize="@dimen/list_activity_text_size"
+    android:id="@+id/herstellerTextViewLeft"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="@string/list_hersteller_text"
+    android:layout_weight="0.0" />
+<TextView android:textSize="@dimen/list_activity_text_size"
+    android:gravity="end"
+    android:id="@+id/herstellerTextViewRight"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text=""
+    android:layout_weight="1.0" />
 </LinearLayout>
-<TextView android:textSize="@dimen/list_activity_text_size" android:id="@+id/headerTextView" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="@dimen/list_activity_margin" android:text="" />
-<TextView android:textSize="@dimen/list_activity_text_size" android:id="@+id/footerTextView" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="@dimen/list_activity_margin" />
+<TextView android:textSize="@dimen/list_activity_text_size"
+    android:id="@+id/headerTextView"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="@dimen/list_activity_margin"
+    android:text="" />
+<TextView android:textSize="@dimen/list_activity_text_size"
+    android:id="@+id/footerTextView"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="@dimen/list_activity_margin" />
     </LinearLayout>

@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/buttonBackgroundColor" />
+    <item android:top="45dp">
+        <bitmap android:gravity="top|center_horizontal" android:src="@mipmap/fire_icon_stretched" />
+    </item>
     <item>
-        <bitmap android:gravity="center" android:src="@mipmap/fire_icon_stretched" />
+        <bitmap android:gravity="bottom|center_horizontal" android:src="@mipmap/zentralwerkstatt_splash_text"/>
     </item>
 </layer-list>

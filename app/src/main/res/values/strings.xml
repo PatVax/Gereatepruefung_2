@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Zentralwerkstatt-Prüfung</string>
+    <string name="app_name_main">Zentralwerkstatt-Prüfung</string>
 
     <string name="login_button_text">Einloggen</string>
     <string name="pruefen_button_text">Prüfen</string>

@@ -157,15 +157,14 @@ public class MainDialogFragment extends Fragment {
         SharedPreferences prefs = getActivity().getSharedPreferences(SHARED_PREFERENCES, 0);
         final SharedPreferences.Editor prefsEdit = prefs.edit();
         try {
-            DBAsyncTask dBAsyncTask = new DBAsyncTask(getActivity(), new DBAsyncResponse() {
+            DBAsyncTask.getLoginInstance(getActivity(), new DBAsyncResponse() {
                 public void processFinish(ArrayList<ContentValues> resultArray) {
-                    if (((ContentValues) resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.LOGIN_SUCCES.getText())) {
-                        MainDialogFragment.this.benutzerEditText.setEnabled(false);
-                        MainDialogFragment.this.aendernButton.setEnabled(true);
-                        MainDialogFragment.this.aendernButton.setVisibility(View.VISIBLE);
+                    if (resultArray.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.LOGIN_SUCCESS.getText())) {
                         prefsEdit.putString(SharedPreferenceEnum.BENUTZER.getText(), MainDialogFragment.this.benutzerEditText.getText().toString());
                         prefsEdit.putString(SharedPreferenceEnum.PASSWORT.getText(), MainDialogFragment.this.passwortEditText.getText().toString());
                         prefsEdit.apply();
+                        prefsEdit.commit();
+                        MainDialogFragment.this.benutzerEditText.setEnabled(false);
                         MainDialogFragment.this.passwortEditText.setText("");
                         MainDialogFragment.this.aendernButton.setEnabled(true);
                         MainDialogFragment.this.aendernButton.setVisibility(View.VISIBLE);
@@ -174,11 +173,9 @@ public class MainDialogFragment extends Fragment {
                         MainDialogFragment.this.mListener.onConnectionFailed();
                     }
                 }
-            }, this.benutzerEditText.getText().toString(), this.passwortEditText.getText().toString());
-            String[] strArr = new String[2];
-            strArr[0] = AsyncTaskOperationEnum.LOGIN.getText();
-            strArr[1] = prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true) ? "1" : "0";
-            dBAsyncTask.execute(strArr);
+            }, this.benutzerEditText.getText().toString(), this.passwortEditText.getText().toString()).
+                    execute(AsyncTaskOperationEnum.LOGIN,
+                    prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true));
         } catch (MalformedURLException e) {
             Toast.makeText(getActivity(), "URL nicht korrekt", Toast.LENGTH_SHORT);
         }

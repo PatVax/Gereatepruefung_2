@@ -51,7 +51,8 @@ public abstract class DBHelper extends SQLiteOpenHelper {
 
     public void deleteAllFromTable() {
         SQLiteDatabase db = getWritableDatabase();
-        db.rawQuery("DELETE FROM " + this.TABLE_NAME, null);
+        db.delete(this.TABLE_NAME, null, null);
+        //db.rawQuery("DELETE FROM " + this.TABLE_NAME, null);
         db.close();
     }
 

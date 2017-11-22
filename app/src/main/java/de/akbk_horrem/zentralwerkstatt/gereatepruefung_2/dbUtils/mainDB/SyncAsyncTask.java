@@ -19,6 +19,7 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.Geraetet
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.KriterienDBHelper;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.PruefergebnisseDBHelper;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.PruefungDBHelper;
+import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.interfaces.SyncAsyncResponse;
 
 import java.net.MalformedURLException;
 import java.util.ArrayList;
@@ -37,7 +38,7 @@ public class SyncAsyncTask extends AsyncTask<Void, Pair, Void> {
     public SyncAsyncTask(Activity currentActivity) {
         this.CONTEXT = currentActivity;
         this.prefs = this.CONTEXT.getSharedPreferences(SHARED_PREFERENCE, 0);
-        this.DIALOG = new ProgressDialog(this.CONTEXT);
+        this.DIALOG = new ProgressDialog(currentActivity);
     }
 
     protected void onPreExecute() {
@@ -46,7 +47,7 @@ public class SyncAsyncTask extends AsyncTask<Void, Pair, Void> {
         this.DIALOG.setTitle("");
         this.DIALOG.setCancelable(false);
         this.DIALOG.setIndeterminate(true);
-        this.DIALOG.setProgressStyle(0);
+        this.DIALOG.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         this.DIALOG.show();
     }
 
@@ -66,7 +67,7 @@ public class SyncAsyncTask extends AsyncTask<Void, Pair, Void> {
 
             this.dbHelper = new PruefungDBHelper(this.CONTEXT);
             ArrayList<ContentValues> contents = ((PruefungDBHelper) this.dbHelper).getRowsByBenutzer(this.prefs.getString(SharedPreferenceEnum.BENUTZER.getText(), ""));
-            for(ContentValues contentValues : result) {
+            for(ContentValues contentValues : contents) {
                     if (contentValues.getAsInteger("Password_Checked").intValue() != 1) {
                         if (checkPruefungPassword(contentValues, "Prüfungen hochladen", "Prüfungen werden hochgeladen")) {
                             ids.add(contentValues.getAsInteger("IDPruefung"));
@@ -146,23 +147,26 @@ public class SyncAsyncTask extends AsyncTask<Void, Pair, Void> {
 
     protected void onProgressUpdate(Pair... values) {
         super.onProgressUpdate(values);
-        this.DIALOG.hide();
+        this.DIALOG.setMessage((String) values[1].second);
+        this.DIALOG.setTitle((String) values[0].second);
+        this.DIALOG.setProgress((int) values[3].second);
+        this.DIALOG.setMax((int) values[4].second);
         try {
             switch ((AsyncTaskOperationEnum) values[2].second) {
                 case LOGIN:
-                    new DBAsyncTask(this.CONTEXT, new DBAsyncResponse() {
+                    DBAsyncTask.getLoginInstance(this.CONTEXT, new DBAsyncResponse() {
                         public void processFinish(ArrayList<ContentValues> resultArray) {
-                            if (((ContentValues) resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.LOGIN_SUCCES.getText())) {
+                            if (((ContentValues) resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.LOGIN_SUCCESS.getText())) {
                                 SyncAsyncTask.this.password = true;
                             } else {
                                 SyncAsyncTask.this.password = false;
                             }
                             SyncAsyncTask.this.dbAsyncStatus = true;
                         }
-                    }, (String) values[6].second, (String) values[7].second).executeOnExecutor(THREAD_POOL_EXECUTOR, new String[]{AsyncTaskOperationEnum.LOGIN.getText(), "0"});
+                    }, false, (String) values[6].second, (String) values[7].second).executeOnExecutor(AsyncTaskOperationEnum.LOGIN, false);
                     break;
                 case CHECK_CONNECTION:
-                    new DBAsyncTask(this.CONTEXT, new DBAsyncResponse() {
+                    DBAsyncTask.getInstance(this.CONTEXT, new DBAsyncResponse() {
                         public void processFinish(ArrayList<ContentValues> resultArray) {
                             if (((ContentValues) resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText())) {
                                 SyncAsyncTask.this.connection = true;
@@ -171,31 +175,28 @@ public class SyncAsyncTask extends AsyncTask<Void, Pair, Void> {
                             }
                             SyncAsyncTask.this.dbAsyncStatus = true;
                         }
-                    }).executeOnExecutor(THREAD_POOL_EXECUTOR, new String[]{AsyncTaskOperationEnum.CHECK_CONNECTION.getText(), "0"});
+                    }, false).executeOnExecutor(AsyncTaskOperationEnum.CHECK_CONNECTION, false);
                     break;
                 case GET_DATA:
-                    new DBAsyncTask(this.CONTEXT, new DBAsyncResponse() {
+                    DBAsyncTask.getInstance(this.CONTEXT, new DBAsyncResponse() {
                         public void processFinish(ArrayList<ContentValues> resultArray) {
                             resultArray.remove(0);
                             SyncAsyncTask.this.result = resultArray;
                             SyncAsyncTask.this.dbAsyncStatus = true;
                         }
-                    }).executeOnExecutor(THREAD_POOL_EXECUTOR, new String[]{((AsyncTaskOperationEnum) values[2].second).getText(), "0", (String) values[5].second});
+                    }, false).executeOnExecutor((AsyncTaskOperationEnum) values[2].second, false, (String) values[5].second);
                     break;
                 case INSERT_DATA:
-                    new DBAsyncTask(this.CONTEXT, new DBAsyncResponse() {
+                    DBAsyncTask.getInstance(this.CONTEXT, new DBAsyncResponse() {
                         public void processFinish(ArrayList<ContentValues> resultArray) {
                             ContentValues result = (ContentValues) resultArray.get(0);
                             SyncAsyncTask.this.dbAsyncStatus = true;
                         }
-                    }).executeOnExecutor(THREAD_POOL_EXECUTOR, new String[]{((AsyncTaskOperationEnum) values[2].second).getText(), "0", (String) values[5].second});
+                    }, false).executeOnExecutor((AsyncTaskOperationEnum) values[2].second, false, (String) values[5].second);
                     break;
             }
-            this.DIALOG.show();
         } catch (MalformedURLException e) {
-            Toast.makeText(this.CONTEXT, "URL nicht korrekt", 0);
-        } catch (Throwable th) {
-            this.DIALOG.show();
+            Toast.makeText(this.CONTEXT, "URL nicht korrekt", Toast.LENGTH_SHORT);
         }
     }
 

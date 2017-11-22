@@ -14,6 +14,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -44,7 +45,7 @@ public class ListActivity extends AppCompatActivity implements OnFragmentInterac
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setSoftInputMode(240);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST);
         setContentView((int) R.layout.activity_list);
         this.listScrollViewFragment = ListScrollViewFragment.newInstance(getIntent().getParcelableArrayListExtra("contents"));
         this.listHeaderFragment = ListHeaderFragment.newInstance(getIntent().getParcelableArrayListExtra("contents"));
@@ -100,9 +101,9 @@ public class ListActivity extends AppCompatActivity implements OnFragmentInterac
             this.valuesArray = savedInstanceState.getParcelableArrayList("list_items");
             this.viewStates = (ContentValues) savedInstanceState.getParcelable("list_items_state");
             if (savedInstanceState.getBoolean("bemerkungen_is_showing")) {
-                this.bemerkungenEditText.setVisibility(0);
+                this.bemerkungenEditText.setVisibility(View.VISIBLE);
             } else {
-                this.bemerkungenEditText.setVisibility(8);
+                this.bemerkungenEditText.setVisibility(View.GONE);
             }
         }
     }
@@ -165,7 +166,7 @@ public class ListActivity extends AppCompatActivity implements OnFragmentInterac
                     DBAsyncTask dBAsyncTask = new DBAsyncTask(this, new DBAsyncResponse() {
                         public void processFinish(ArrayList<ContentValues> result) {
                             String sql = "INSERT INTO prüfergebnisse VALUES ";
-                            if (((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCES.getText())) {
+                            if (((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText())) {
                                 StringBuilder builder = new StringBuilder();
                                 String barcode = ((ContentValues) bufferValuesArray.get(0)).getAsString("Geräte_Barcode");
                                 for (int i = 0; i < bufferValuesArray.size() - 1; i++) {
@@ -192,7 +193,7 @@ public class ListActivity extends AppCompatActivity implements OnFragmentInterac
                                 try {
                                     DBAsyncTask dBAsyncTask = new DBAsyncTask(ListActivity.this, new DBAsyncResponse() {
                                         public void processFinish(ArrayList<ContentValues> result) {
-                                            if (((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCES.getText())) {
+                                            if (((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText())) {
                                                 ListActivity.this.finish();
                                             }
                                         }

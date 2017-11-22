@@ -10,7 +10,7 @@ public class GeraetetypDBHelper extends DBHelper {
     }
 
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE " + this.TABLE_NAME + " (IDGeraetetyp INTEGER PRIMARY KEY, HerstellerName TEXT, HeaderText TEXT, FooterText TEXT, GeraeteName TEXT)");
+        db.execSQL("CREATE TABLE " + this.TABLE_NAME + " (IDGeraetetyp INTEGER PRIMARY KEY, Hersteller TEXT, HeaderText TEXT, FooterText TEXT, Bezeichnung TEXT)");
     }
 
     public void insertRow(int idGeraetetyp, String hersteller, String HeaderText, String FooterText, String Bezeichnung) {

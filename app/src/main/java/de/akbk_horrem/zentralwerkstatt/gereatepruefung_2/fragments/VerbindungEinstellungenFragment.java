@@ -88,7 +88,7 @@ public class VerbindungEinstellungenFragment extends Fragment {
         });
         this.rootTextView = (TextView) view.findViewById(R.id.rootTextView);
         try {
-            new DBAsyncTask(getActivity(), new DBAsyncResponse() {
+            DBAsyncTask.getInstance(getActivity(), new DBAsyncResponse() {
                 public void processFinish(ArrayList<ContentValues> result) {
                     if (((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()) == DBConnectionStatusEnum.CONNECTED.getText()) {
                         VerbindungEinstellungenFragment.this.rootTextView.setText(((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.DATABASE_USER.getText()) + "-Passwort");
@@ -96,7 +96,7 @@ public class VerbindungEinstellungenFragment extends Fragment {
                         VerbindungEinstellungenFragment.this.rootTextView.setText("Datenbankbenutzer-Passwort");
                     }
                 }
-            }).execute(new String[]{AsyncTaskOperationEnum.GET_DATABASE_USER.getText(), "0"});
+            }).execute(AsyncTaskOperationEnum.GET_DATABASE_USER, false);
         } catch (MalformedURLException e) {
         }
         this.offlineModeCheckBox = (CheckBox) view.findViewById(R.id.offlineModeCheckBox);
@@ -176,23 +176,23 @@ public class VerbindungEinstellungenFragment extends Fragment {
         SharedPreferences prefs = getActivity().getSharedPreferences(SHARED_PREFERENCES, 0);
         final SharedPreferences.Editor prefsEdit = prefs.edit();
         try {
-            DBAsyncTask dBAsyncTask = new DBAsyncTask(getActivity(), new DBAsyncResponse() {
+            DBAsyncTask.getConnectionCheckInstance(getActivity(), new DBAsyncResponse() {
                 public void processFinish(ArrayList<ContentValues> resultArray) {
-                    if (((ContentValues) resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText())) {
+                    if (resultArray.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText())) {
                         prefsEdit.putString(SharedPreferenceEnum.HOST.getText(), VerbindungEinstellungenFragment.this.uriEditText.getText().toString());
                         prefsEdit.putString(SharedPreferenceEnum.PFAD.getText(), VerbindungEinstellungenFragment.this.pfadEditText.getText().toString());
                         prefsEdit.putString(SharedPreferenceEnum.ROOT_PASSWORT.getText(), VerbindungEinstellungenFragment.this.rootEditText.getText().toString());
                         VerbindungEinstellungenFragment.this.offlineModeCheckBox.setChecked(false);
                         try {
-                            new DBAsyncTask(VerbindungEinstellungenFragment.this.getActivity(), new DBAsyncResponse() {
+                            DBAsyncTask.getInstance(VerbindungEinstellungenFragment.this.getActivity(), new DBAsyncResponse() {
                                 public void processFinish(ArrayList<ContentValues> result) {
-                                    if (((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText())) {
-                                        VerbindungEinstellungenFragment.this.rootTextView.setText(((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.DATABASE_USER.getText()) + "-Passwort");
+                                    if (result.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText())) {
+                                        VerbindungEinstellungenFragment.this.rootTextView.setText(result.get(0).getAsString(DBConnectionStatusEnum.DATABASE_USER.getText()) + "-Passwort");
                                     } else {
                                         VerbindungEinstellungenFragment.this.rootTextView.setText("Datenbankbenutzer-Passwort");
                                     }
                                 }
-                            }).execute(new String[]{AsyncTaskOperationEnum.GET_DATABASE_USER.getText(), "0"});
+                            }).execute(AsyncTaskOperationEnum.GET_DATABASE_USER, false);
                         } catch (MalformedURLException e) {
                         }
                         prefsEdit.apply();
@@ -202,11 +202,9 @@ public class VerbindungEinstellungenFragment extends Fragment {
                     }
                     VerbindungEinstellungenFragment.this.mListener.onConnectionFailed();
                 }
-            }, new URL(String.format("%s/%s", new Object[]{this.uriEditText.getText().toString(), this.pfadEditText.getText().toString()})), this.rootEditText.getText().toString());
-            String[] strArr = new String[2];
-            strArr[0] = AsyncTaskOperationEnum.CHECK_CONNECTION.getText();
-            strArr[1] = prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true) ? "1" : "0";
-            dBAsyncTask.execute(strArr);
+            }, new URL(String.format("%s/%s", new Object[]{this.uriEditText.getText().toString(), this.pfadEditText.getText().toString()})), this.rootEditText.getText().toString()).
+                    execute(AsyncTaskOperationEnum.CHECK_CONNECTION,
+                            prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true));
         } catch (MalformedURLException e) {
             this.mListener.onConnectionFailed();
             Toast.makeText(getActivity(), "URL nicht korrekt", Toast.LENGTH_SHORT).show();

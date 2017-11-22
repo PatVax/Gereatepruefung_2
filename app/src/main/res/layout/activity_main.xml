@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:gravity="center_horizontal"
     android:id="@+id/activity_main"
@@ -10,8 +9,26 @@
     android:layout_height="match_parent"
     tools:context="de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.MainActivity">
 
-    <fragment android:name="de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments.MainFragment" android:id="@+id/mainFragment" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_centerHorizontal="true" />
-    <fragment android:name="de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments.VerbindungEinstellungenFragment" android:id="@+id/verbindungFragment" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_alignParentLeft="true" android:layout_alignParentTop="@+id/mainFragment" android:layout_marginStart="10dp" android:layout_marginEnd="10dp" />
-    <fragment android:name="de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments.MainDialogFragment" android:id="@+id/loginFragment" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_alignParentLeft="true" android:layout_alignParentTop="@+id/mainFragment" android:layout_marginStart="10dp" android:layout_marginEnd="10dp" />
+    <fragment android:name="de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments.MainFragment"
+        android:id="@+id/mainFragment"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_centerHorizontal="true" />
+    <fragment android:name="de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments.VerbindungEinstellungenFragment"
+        android:id="@+id/verbindungFragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="@+id/mainFragment"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp" />
+    <fragment android:name="de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments.MainDialogFragment"
+        android:id="@+id/loginFragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="@+id/mainFragment"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp" />
 
 </RelativeLayout>

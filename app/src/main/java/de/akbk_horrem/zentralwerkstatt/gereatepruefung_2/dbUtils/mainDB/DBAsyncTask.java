@@ -15,7 +15,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -41,7 +40,84 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
     private final String PASSWORT;
     private final DBAsyncResponse RESPONSE;
     private final String ROOT_PASSWORT;
+    private final boolean SHOW_DIALOG;
     private SharedPreferences prefs;
+
+    public void execute (AsyncTaskOperationEnum asyncTaskOperationEnum, boolean showToast, String sql) {
+        this.execute(asyncTaskOperationEnum.getText(), showToast ? "1" : "0", sql);
+    }
+
+    public void execute (AsyncTaskOperationEnum asyncTaskOperationEnum, boolean showToast) {
+        this.execute(asyncTaskOperationEnum.getText(), showToast ? "1" : "0");
+    }
+
+    public void executeOnExecutor (AsyncTaskOperationEnum asyncTaskOperationEnum, boolean showToast, String sql) {
+        this.executeOnExecutor(THREAD_POOL_EXECUTOR, asyncTaskOperationEnum.getText(), showToast ? "1" : "0", sql);
+    }
+
+    public void executeOnExecutor (AsyncTaskOperationEnum asyncTaskOperationEnum, boolean showToast) {
+        this.executeOnExecutor(THREAD_POOL_EXECUTOR, asyncTaskOperationEnum.getText(), showToast ? "1" : "0");
+    }
+
+    public static DBAsyncTask getLoginInstance(Activity currentActivity, DBAsyncResponse response, boolean showDialog, String benutzer, String passwort) throws MalformedURLException {
+        return new DBAsyncTask(currentActivity, response, showDialog, benutzer, passwort);
+    }
+
+    public static DBAsyncTask getInstance(Activity currentActivity, DBAsyncResponse response, boolean showDialog) throws MalformedURLException {
+        return new DBAsyncTask(currentActivity, response, showDialog);
+    }
+
+    public static DBAsyncTask getConnectionCheckInstance(Activity currentActivity, DBAsyncResponse response, boolean showDialog, URL link, String rootPasswort){
+        return new DBAsyncTask(currentActivity, response, showDialog, link, rootPasswort);
+    }
+
+    public static DBAsyncTask getLoginInstance(Activity currentActivity, DBAsyncResponse response, String benutzer, String passwort) throws MalformedURLException {
+        return new DBAsyncTask(currentActivity, response, benutzer, passwort);
+    }
+
+    public static DBAsyncTask getInstance(Activity currentActivity, DBAsyncResponse response) throws MalformedURLException {
+        return new DBAsyncTask(currentActivity, response);
+    }
+
+    public static DBAsyncTask getConnectionCheckInstance(Activity currentActivity, DBAsyncResponse response, URL link, String rootPasswort){
+        return new DBAsyncTask(currentActivity, response, link, rootPasswort);
+    }
+
+    public DBAsyncTask(Activity currentActivity, DBAsyncResponse response, boolean showDialog, URL link, String rootPasswort) {
+        this.prefs = currentActivity.getSharedPreferences(SHARED_PREFERENCE, 0);
+        this.CONTEXT = currentActivity;
+        this.LINK = link;
+        this.BENUTZER = "";
+        this.PASSWORT = "";
+        this.ROOT_PASSWORT = rootPasswort;
+        this.RESPONSE = response;
+        this.SHOW_DIALOG = showDialog;
+        this.DIALOG = new ProgressDialog(currentActivity);
+    }
+
+    public DBAsyncTask(Activity currentActivity, DBAsyncResponse response, boolean showDialog, String benutzer, String passwort) throws MalformedURLException {
+        this.prefs = currentActivity.getSharedPreferences(SHARED_PREFERENCE, 0);
+        this.CONTEXT = currentActivity;
+        this.LINK = new URL(String.format("%s/%s", new Object[]{this.prefs.getString(SharedPreferenceEnum.HOST.getText(), null), this.prefs.getString(SharedPreferenceEnum.PFAD.getText(), null)}));
+        this.BENUTZER = benutzer;
+        this.PASSWORT = encodePasswort(passwort);
+        this.ROOT_PASSWORT = this.prefs.getString(SharedPreferenceEnum.ROOT_PASSWORT.getText(), "");
+        this.RESPONSE = response;
+        this.SHOW_DIALOG = showDialog;
+        this.DIALOG = new ProgressDialog(currentActivity);
+    }
+
+    public DBAsyncTask(Activity currentActivity, DBAsyncResponse response, boolean showDialog) throws MalformedURLException {
+        this.prefs = currentActivity.getSharedPreferences(SHARED_PREFERENCE, 0);
+        this.CONTEXT = currentActivity;
+        this.LINK = new URL(String.format("%s/%s", new Object[]{this.prefs.getString(SharedPreferenceEnum.HOST.getText(), null), this.prefs.getString(SharedPreferenceEnum.PFAD.getText(), null)}));
+        this.BENUTZER = "";
+        this.PASSWORT = "";
+        this.ROOT_PASSWORT = this.prefs.getString(SharedPreferenceEnum.ROOT_PASSWORT.getText(), "");
+        this.RESPONSE = response;
+        this.SHOW_DIALOG = showDialog;
+        this.DIALOG = new ProgressDialog(currentActivity);
+    }
 
     public DBAsyncTask(Activity currentActivity, DBAsyncResponse response, URL link, String rootPasswort) {
         this.prefs = currentActivity.getSharedPreferences(SHARED_PREFERENCE, 0);
@@ -51,6 +127,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
         this.PASSWORT = "";
         this.ROOT_PASSWORT = rootPasswort;
         this.RESPONSE = response;
+        this.SHOW_DIALOG = true;
         this.DIALOG = new ProgressDialog(currentActivity);
     }
 
@@ -62,6 +139,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
         this.PASSWORT = encodePasswort(passwort);
         this.ROOT_PASSWORT = this.prefs.getString(SharedPreferenceEnum.ROOT_PASSWORT.getText(), "");
         this.RESPONSE = response;
+        this.SHOW_DIALOG = true;
         this.DIALOG = new ProgressDialog(currentActivity);
     }
 
@@ -73,343 +151,176 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
         this.PASSWORT = "";
         this.ROOT_PASSWORT = this.prefs.getString(SharedPreferenceEnum.ROOT_PASSWORT.getText(), "");
         this.RESPONSE = response;
+        this.SHOW_DIALOG = true;
         this.DIALOG = new ProgressDialog(currentActivity);
     }
 
     protected void onPreExecute() {
         super.onPreExecute();
-        this.DIALOG.setMessage("");
-        this.DIALOG.setTitle("");
-        this.DIALOG.setCancelable(false);
-        this.DIALOG.setIndeterminate(true);
-        this.DIALOG.setProgressStyle(0);
-        this.DIALOG.show();
+        if(SHOW_DIALOG) {
+            this.DIALOG.setMessage("");
+            this.DIALOG.setTitle("");
+            this.DIALOG.setCancelable(false);
+            this.DIALOG.setIndeterminate(true);
+            this.DIALOG.setProgressStyle(0);
+            this.DIALOG.show();
+        }
     }
 
     protected ArrayList<ContentValues> doInBackground(String... params) {
         ArrayList<ContentValues> resultArray = new ArrayList();
-        StringBuilder builder;
         ContentValues result = new ContentValues();
         result.put("showToast", params[1]);
         BufferedReader reader;
         String line;
-        String lastLine;
-        if (params[0].equals(AsyncTaskOperationEnum.CHECK_CONNECTION.getText())) {
-            publishProgress(createProgressList("Verbinden", "Verbindung wird geprüft"));
-            try {
-                reader = getReader(params[0], this.ROOT_PASSWORT, this.LINK);
-                line = null;
-                while (true) {
-                    lastLine = reader.readLine();
-                    if (lastLine == null) {
-                        break;
-                    }
-                    line = lastLine;
-                }
-                reader.close();
-                if (line.trim().equals("1")) {
-                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTED.getText());
-                } else if (line.trim().equals("0")) {
-                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.DATABASE_FAILED.getText());
-                }
+        switch (params[0])
+        {
+            case "check_connection":
+
+                publishProgress(createProgressList("Verbinden", "Verbindung wird geprüft"));
+
+                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), checkConnection() ?
+                        DBConnectionStatusEnum.CONNECTED.getText() :
+                        DBConnectionStatusEnum.CONNECTION_FAILED.getText());
+
                 resultArray.add(result);
-            } catch (IOException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (KeyManagementException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (NoSuchAlgorithmException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            }
-        } else if (params[0].equals(AsyncTaskOperationEnum.LOGIN.getText())) {
-            publishProgress(createProgressList("Anmelden", "Sie werden angemeldet"));
-            try {
-                reader = getReader(AsyncTaskOperationEnum.CHECK_CONNECTION.getText(), this.ROOT_PASSWORT, this.LINK);
-                line = null;
-                while (true) {
-                    lastLine = reader.readLine();
-                    if (lastLine == null) {
-                        break;
-                    }
-                    line = lastLine;
-                }
-                reader.close();
-                if (line.trim().equals("1")) {
-                    reader = getReader(params[0], this.ROOT_PASSWORT, this.LINK);
-                    line = null;
-                    while (true) {
-                        lastLine = reader.readLine();
-                        if (lastLine == null) {
-                            break;
-                        }
-                        line = lastLine;
-                    }
-                    reader.close();
-                    if (line.trim().equals("1")) {
-                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.LOGIN_SUCCES.getText());
-                    } else if (line.trim().equals("0")) {
-                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.LOGIN_FAILED.getText());
-                    }
-                } else {
+                return  resultArray;
+            case "login":
+                publishProgress(createProgressList("Anmelden", "Sie werden angemeldet"));
+
+                if (checkConnection()) {
+
+                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), login().getText());
+
+                } else
                     result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
-                }
-                resultArray.add(result);
-            } catch (IOException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.LOGIN_FAILED.getText());
+
                 resultArray.add(result);
                 return resultArray;
-            } catch (KeyManagementException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.LOGIN_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (NoSuchAlgorithmException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.LOGIN_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            }
-        } else if (params[0].equals(AsyncTaskOperationEnum.GET_DATABASE_USER.getText())) {
-            publishProgress(createProgressList("Übertragen", "Daten werden übertragen"));
-            try {
-                reader = getReader(AsyncTaskOperationEnum.CHECK_CONNECTION.getText(), this.ROOT_PASSWORT, this.LINK);
-                line = null;
-                while (true) {
-                    lastLine = reader.readLine();
-                    if (lastLine == null) {
-                        break;
-                    }
-                    line = lastLine;
-                }
-                reader.close();
-                if (line.trim().equals("1")) {
-                    reader = getReader(AsyncTaskOperationEnum.GET_DATABASE_USER.getText(), this.ROOT_PASSWORT, this.LINK);
-                    line = null;
-                    while (true) {
-                        lastLine = reader.readLine();
-                        if (lastLine == null) {
-                            break;
-                        }
-                        line = lastLine;
-                    }
-                    reader.close();
-                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), line != null ? DBConnectionStatusEnum.CONNECTED.getText() : DBConnectionStatusEnum.CONNECTION_FAILED.getText());
-                    result.put(DBConnectionStatusEnum.DATABASE_USER.getText(), line.toString().trim());
+            case "get_database_user":
+
+                publishProgress(createProgressList("Übertragen", "Daten werden übertragen"));
+
+                try {
+
+                    if (checkConnection()) {
+                        reader = getReader(AsyncTaskOperationEnum.GET_DATABASE_USER.getText(), this.ROOT_PASSWORT, this.LINK);
+                        line = reader.readLine();
+                        reader.close();
+                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), line != null ? DBConnectionStatusEnum.CONNECTED.getText() : DBConnectionStatusEnum.CONNECTION_FAILED.getText());
+                        result.put(DBConnectionStatusEnum.DATABASE_USER.getText(), line.toString().trim());
+
+                    } else
+                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
+
+                } catch (IOException|KeyManagementException|NoSuchAlgorithmException e) {
+                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
+
+                } finally {
                     resultArray.add(result);
-                } else {
-                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
+                    return resultArray;
                 }
-                resultArray.add(result);
-            } catch (IOException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.LOGIN_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (KeyManagementException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.LOGIN_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (NoSuchAlgorithmException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.LOGIN_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            }
-        } else if (params[0].equals(AsyncTaskOperationEnum.GET_DATA.getText())) {
-            publishProgress(createProgressList("Verbinden", "Verbindung wird geprüft"));
-            try {
-                reader = getReader(AsyncTaskOperationEnum.CHECK_CONNECTION.getText(), this.ROOT_PASSWORT, this.LINK);
-                line = null;
-                while (true) {
-                    lastLine = reader.readLine();
-                    if (lastLine == null) {
-                        break;
-                    }
-                    line = lastLine;
+            case "get_data":
+
+                publishProgress(createProgressList("Verbinden", "Verbindung wird geprüft"));
+
+                try {
+
+                    if (checkConnection()) {
+                        publishProgress(createProgressList("Übertragen", "Daten werden übertragen"));
+                        reader = getReader(params[2], this.ROOT_PASSWORT, this.LINK);
+                        publishProgress(createProgressList("Verarbeiten", "Daten werden verarbeitet"));
+                        line = reader.readLine();
+
+                        if (line.trim().equals("[]"))
+                            result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.BARCODE_FAILED.getText());
+
+                        else
+                            result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.SUCCESS.getText());
+
+                        resultArray.add(result);
+
+                        for (ContentValues contentValues : jsonArrayToContentValues(line.trim()))
+                            resultArray.add(contentValues);
+
+                    } else
+                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
+
+                } catch (IOException|KeyManagementException|NoSuchAlgorithmException|JSONException e) {
+                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.TRANSFER_FAILED.getText());
+
+                } finally {;
+                    return resultArray;
                 }
-                reader.close();
-                if (line.trim().equals("1")) {
-                    publishProgress(createProgressList("Übertragen", "Daten werden übertragen"));
-                    reader = getReader(params[2], this.ROOT_PASSWORT, this.LINK);
-                    publishProgress(createProgressList("Verarbeiten", "Daten werden verarbeitet"));
-                    builder = new StringBuilder();
-                    line = reader.readLine();
-                    if (line != null) {
-                        builder.append(line);
-                    }
-                    reader.close();
-                    if (builder.toString().equals("[]")) {
-                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.BARCODE_FAILED.getText());
-                    } else {
-                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.SUCCES.getText());
-                    }
+            case "insert_data":
+                publishProgress(createProgressList("Verbinden", "Verbindung wird geprüft"));
+
+                try {
+
+                    if (checkConnection()) {
+
+                        publishProgress(createProgressList("Übertragen", "Daten werden übertragen"));
+                        reader = getReader(params[2], this.ROOT_PASSWORT, this.LINK);
+                        line = reader.readLine();
+
+                        if (line.trim().equals("1"))
+                            result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.SUCCESS.getText());
+
+                        else
+                            result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.INSERT_FAILED.getText());
+
+                    } else
+                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
+
+                } catch (IOException|KeyManagementException|NoSuchAlgorithmException e) {
+                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.INSERT_FAILED.getText());
+
+                } finally {
                     resultArray.add(result);
-                    Iterator it = jsonArrayToContentValues(builder.toString().trim()).iterator();
-                    while (it.hasNext()) {
-                        resultArray.add((ContentValues) it.next());
-                    }
-                } else {
-                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
-                    resultArray.add(result);
+                    return resultArray;
                 }
-            } catch (IOException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.TRANSFER_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (KeyManagementException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.TRANSFER_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (NoSuchAlgorithmException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.TRANSFER_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (JSONException e) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.TRANSFER_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            }
-        } else if (params[0].equals(AsyncTaskOperationEnum.INSERT_DATA.getText())) {
-            publishProgress(createProgressList("Verbinden", "Verbindung wird geprüft"));
-            try {
-                reader = getReader(AsyncTaskOperationEnum.CHECK_CONNECTION.getText(), this.ROOT_PASSWORT, this.LINK);
-                line = null;
-                while (true) {
-                    lastLine = reader.readLine();
-                    if (lastLine == null) {
-                        break;
-                    }
-                    line = lastLine;
-                }
-                reader.close();
-                if (line.trim().equals("1")) {
-                    publishProgress(createProgressList("Übertragen", "Daten werden übertragen"));
-                    reader = getReader(params[2], this.ROOT_PASSWORT, this.LINK);
-                    builder = new StringBuilder();
-                    line = reader.readLine();
-                    if (line != null) {
-                        builder.append(line);
-                    }
-                    reader.close();
-                    if (line.trim().equals("1")) {
-                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.SUCCES.getText());
-                    } else {
-                        result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.INSERT_FAILED.getText());
-                    }
-                } else {
-                    result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
-                }
-                resultArray.add(result);
-            } catch (IOException e13) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.TRANSFER_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (KeyManagementException e14) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.TRANSFER_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            } catch (NoSuchAlgorithmException e15) {
-                result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.TRANSFER_FAILED.getText());
-                resultArray.add(result);
-                return resultArray;
-            }
+            default:
+                return null;
         }
-        return resultArray;
     }
 
     protected void onPostExecute(ArrayList<ContentValues> resultArray) {
         super.onPostExecute(resultArray);
         Toast toast = null;
-        this.DIALOG.hide();
-        this.DIALOG.dismiss();
-        ContentValues result = (ContentValues) resultArray.get(0);
+        if(SHOW_DIALOG) {
+            this.DIALOG.hide();
+            this.DIALOG.dismiss();
+        }
+        ContentValues result = resultArray.get(0);
         if (result.getAsString("showToast").equals("1")) {
-            String asString = result.getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText());
-            int i = -1;
-            switch (asString.hashCode()) {
-                case -1474478914:
-                    if (asString.equals("connection_failed")) {
-                        i = 2;
-                        break;
-                    }
-                    break;
-                case -891515280:
-                    if (asString.equals("succes")) {
-                        i = 3;
-                        break;
-                    }
-                    break;
-                case -749667197:
-                    if (asString.equals("insert_failed")) {
-                        i = 8;
-                        break;
-                    }
-                    break;
-                case -579210487:
-                    if (asString.equals("connected")) {
-                        i = 0;
-                        break;
-                    }
-                    break;
-                case -545183277:
-                    if (asString.equals("login_failed")) {
-                        i = 5;
-                        break;
-                    }
-                    break;
-                case -154721274:
-                    if (asString.equals("login_succes")) {
-                        i = 6;
-                        break;
-                    }
-                    break;
-                case -7726884:
-                    if (asString.equals("barcode_failed")) {
-                        i = 7;
-                        break;
-                    }
-                    break;
-                case 661188481:
-                    if (asString.equals("database_failed")) {
-                        i = 1;
-                        break;
-                    }
-                    break;
-                case 1215703825:
-                    if (asString.equals("transfer_failed")) {
-                        i = 4;
-                        break;
-                    }
-                    break;
-            }
-            switch (i) {
-                case 0:
-                    toast = Toast.makeText(this.CONTEXT, "Verbindung wurde geprüft", Toast.LENGTH_SHORT);
-                    break;
-                case 1:
-                    toast = Toast.makeText(this.CONTEXT, "Datenbank nicht erreicht", Toast.LENGTH_SHORT);
-                    break;
-                case 2:
+            switch (result.getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()))
+            {
+                case "connection_failed":
                     toast = Toast.makeText(this.CONTEXT, "Verbindung Fehlgeschlagen", Toast.LENGTH_SHORT);
                     break;
-                case 3:
+                case "success":
                     toast = Toast.makeText(this.CONTEXT, "Übertragung Erfolgreich", Toast.LENGTH_SHORT);
                     break;
-                case 4:
-                    toast = Toast.makeText(this.CONTEXT, "Übertragung Fehlgeschlagen", Toast.LENGTH_SHORT);
+                case "insert_failed":
+                    toast = Toast.makeText(this.CONTEXT, "Einfügen der Daten Fehlgeschlagen", Toast.LENGTH_SHORT);
                     break;
-                case 5:
+                case "connected":
+                    toast = Toast.makeText(this.CONTEXT, "Verbindung wurde geprüft", Toast.LENGTH_SHORT);
+                    break;
+                case "login_failed":
                     toast = Toast.makeText(this.CONTEXT, "Anmeldung Fehlgeschlagen", Toast.LENGTH_SHORT);
                     break;
-                case 6:
+                case "login_success":
                     toast = Toast.makeText(this.CONTEXT, "Anmeldung Erfolgreich", Toast.LENGTH_SHORT);
                     break;
-                case 7:
+                case "barcode_failed":
                     toast = Toast.makeText(this.CONTEXT, "Barcode nicht hinterlegt", Toast.LENGTH_SHORT);
                     break;
-                case 8:
-                    toast = Toast.makeText(this.CONTEXT, "Einfügen der Daten Fehlgeschlagen", Toast.LENGTH_SHORT);
+                case "database_failed":
+                    toast = Toast.makeText(this.CONTEXT, "Datenbank nicht erreicht", Toast.LENGTH_SHORT);
+                    break;
+                case "transfer_failed":
+                    toast = Toast.makeText(this.CONTEXT, "Übertragung Fehlgeschlagen", Toast.LENGTH_SHORT);
                     break;
             }
             if (toast != null) {
@@ -421,19 +332,20 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
 
     protected void onProgressUpdate(Pair... values) {
         super.onProgressUpdate(values);
-        for (int index = 0; index < values.length; index++) {
-            if (values[index].first.equals("title")) {
-                this.DIALOG.setTitle((String) values[index].second);
-            } else if (values[index].first.equals("message")) {
-                this.DIALOG.setMessage((String) values[index].second);
+        if(SHOW_DIALOG)
+            for (int i = 0; i < values.length; i++) {
+                if (values[i].first.equals("title")) {
+                    this.DIALOG.setTitle((String) values[i].second);
+                } else if (values[i].first.equals("message")) {
+                    this.DIALOG.setMessage((String) values[i].second);
+                }
             }
-        }
     }
 
     private static ArrayList<ContentValues> jsonArrayToContentValues(String jsonString) throws JSONException {
         ArrayList<ContentValues> outputArray = new ArrayList();
         if (jsonString == null) {
-            throw new JSONException("");
+            throw new JSONException("Given String is null");
         } else {
             JSONArray array = new JSONArray(jsonString);
             for (int i = 0; i < array.length(); i++) {
@@ -441,7 +353,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
                 JSONObject object = array.getJSONObject(i);
                 Iterator<String> iterator = object.keys();
                 while (iterator.hasNext()) {
-                    String key = (String) iterator.next();
+                    String key = iterator.next();
                     output.put(key, object.getString(key));
                 }
                 outputArray.add(output);
@@ -462,15 +374,15 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
         if (this.LINK.getProtocol().equals("https")) {
             SSLContext sc = SSLContext.getInstance("TLS");
             sc.init(null, null, new SecureRandom());
-            URLConnection httpsConnection = (HttpsURLConnection) urlConnection.openConnection();
+            URLConnection httpsConnection = urlConnection.openConnection();
             httpsConnection.setDoOutput(true);
             httpsConnection.setDoInput(true);
             httpsConnection.setConnectTimeout(5000);
-            //httpsConnection.setSSLSocketFactory(sc.getSocketFactory());
+            ((HttpsURLConnection)httpsConnection).setSSLSocketFactory(sc.getSocketFactory());
             httpsConnection.connect();
             connection = httpsConnection;
         } else {
-            URLConnection httpConnection = (HttpURLConnection) urlConnection.openConnection();
+            URLConnection httpConnection = urlConnection.openConnection();
             httpConnection.setDoOutput(true);
             httpConnection.setDoInput(true);
             httpConnection.setConnectTimeout(5000);
@@ -478,10 +390,55 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
             connection = httpConnection;
         }
         OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
-        writer.write(URLEncoder.encode("url", "ISO-8859-1") + "=" + anfrage + "&" + URLEncoder.encode("user", "ISO-8859-1") + "=" + URLEncoder.encode(this.BENUTZER, "ISO-8859-1") + "&" + URLEncoder.encode("pass", "ISO-8859-1") + "=" + URLEncoder.encode(this.PASSWORT, "ISO-8859-1") + "&" + URLEncoder.encode("rootPass", "ISO-8859-1") + "=" + URLEncoder.encode(encodeRootPasswort(rootPasswort), "ISO-8859-1"));
+        writer.write(URLEncoder.encode("url", "ISO-8859-1") + "="
+                + URLEncoder.encode(anfrage, "ISO-8859-1") + "&"
+                + URLEncoder.encode("user", "ISO-8859-1") + "="
+                + URLEncoder.encode(this.BENUTZER, "ISO-8859-1") + "&"
+                + URLEncoder.encode("pass", "ISO-8859-1") + "="
+                + URLEncoder.encode(this.PASSWORT, "ISO-8859-1") + "&"
+                + URLEncoder.encode("rootPass", "ISO-8859-1") + "="
+                + URLEncoder.encode(encodeRootPasswort(rootPasswort), "ISO-8859-1"));
         writer.flush();
         writer.close();
         return new BufferedReader(new InputStreamReader(connection.getInputStream()));
+    }
+
+    private boolean checkConnection() {
+        BufferedReader reader;
+        String line;
+        try {
+            reader = getReader(AsyncTaskOperationEnum.CHECK_CONNECTION.getText(), this.ROOT_PASSWORT, this.LINK);
+            line = reader.readLine();
+            reader.close();
+
+            return line.trim().equals("1") ? true : false;
+
+        } catch (IOException|KeyManagementException|NoSuchAlgorithmException e) {
+            return false;
+        }
+    }
+
+    private DBConnectionStatusEnum login(){
+        BufferedReader reader;
+        String line;
+
+        try{
+            reader = getReader(AsyncTaskOperationEnum.LOGIN.getText(), this.ROOT_PASSWORT, this.LINK);
+            line = reader.readLine();
+            reader.close();
+
+            switch (line.trim()) {
+                case "1":
+                    return DBConnectionStatusEnum.LOGIN_SUCCESS;
+                case "0":
+                    return DBConnectionStatusEnum.LOGIN_FAILED;
+                default:
+                    return DBConnectionStatusEnum.CONNECTION_FAILED;
+            }
+
+        } catch (IOException|KeyManagementException|NoSuchAlgorithmException e) {
+            return DBConnectionStatusEnum.LOGIN_FAILED;
+        }
     }
 
     private String encodePasswort(String passwort) {

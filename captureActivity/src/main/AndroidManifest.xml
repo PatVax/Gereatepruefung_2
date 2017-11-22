@@ -39,8 +39,7 @@
   <uses-feature android:name="android.hardware.screen.landscape"/>
   <uses-feature android:name="android.hardware.wifi" android:required="false"/>
 
-  <application android:label="@string/app_name"
-               android:allowBackup="true">
+  <application android:allowBackup="true">
     <activity android:name=".CaptureActivity"
               android:screenOrientation="sensorLandscape"
               android:clearTaskOnLaunch="true"

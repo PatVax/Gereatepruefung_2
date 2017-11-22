@@ -24,6 +24,7 @@ import com.google.zxing.client.android.PreferencesActivity;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 
+import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.Pruefung;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.AsyncTaskOperationEnum;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.DBConnectionStatusEnum;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.SharedPreferenceEnum;
@@ -70,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements MainFragment.OnFr
         this.scannerButton = findViewById(R.id.einstellungenButton);
         this.syncButton = findViewById(R.id.syncButton);
         SharedPreferences prefs = getSharedPreferences(SHARED_PREFERENCES, MODE_PRIVATE);
+        if(getIntent().getBooleanExtra("connection", false));
         if (savedInstanceState != null) {
             this.loginButton.setText(prefs.getString(SharedPreferenceEnum.BENUTZER.getText(), "EINLOGGEN"));
         } else if (prefs.getBoolean(SharedPreferenceEnum.OFFLINE_MODE.getText(), false)) {
@@ -77,25 +79,14 @@ public class MainActivity extends AppCompatActivity implements MainFragment.OnFr
             this.verbindungEinstellungenFragment.hide();
             this.loginButton.setEnabled(true);
         } else {
-            try {
-                new DBAsyncTask(this, new DBAsyncResponse() {
-                    public void processFinish(ArrayList<ContentValues> resultArray) {
-                        if ((resultArray.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText()))) {
-                            MainActivity.this.mainDialogFragment.show();
-                            MainActivity.this.verbindungEinstellungenFragment.hide();
-                            MainActivity.this.loginButton.setEnabled(true);
-                            return;
-                        }
-                        MainActivity.this.mainDialogFragment.hide();
-                        MainActivity.this.verbindungEinstellungenFragment.show();
-                        MainActivity.this.loginButton.setEnabled(false);
-                    }
-                }).execute(AsyncTaskOperationEnum.CHECK_CONNECTION.getText(), prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true) ? "1" : "0");
-            } catch (MalformedURLException e) {
-                this.mainDialogFragment.hide();
-                this.verbindungEinstellungenFragment.show();
-                this.loginButton.setEnabled(false);
-                Toast.makeText(this, "URL nicht korrekt", Toast.LENGTH_SHORT).show();
+            if (getIntent().getBooleanExtra("connection", false)) {
+                MainActivity.this.mainDialogFragment.show();
+                MainActivity.this.verbindungEinstellungenFragment.hide();
+                MainActivity.this.loginButton.setEnabled(true);
+            } else {
+                MainActivity.this.mainDialogFragment.hide();
+                MainActivity.this.verbindungEinstellungenFragment.show();
+                MainActivity.this.loginButton.setEnabled(false);
             }
         }
     }
@@ -272,26 +263,25 @@ public class MainActivity extends AppCompatActivity implements MainFragment.OnFr
         } else {
             try {
                 String str;
-                new DBAsyncTask(this, new DBAsyncResponse() {
+                DBAsyncTask.getInstance(this, new DBAsyncResponse() {
                     public void processFinish(ArrayList<ContentValues> result) {
-                        if ((result.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCES.getText()))) {
+                        if ((result.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText()))) {
                             result.remove(0);
                             if (result.size() > 0) {
                                 isStartingActivity = true;
                                 Intent intent = new Intent(MainActivity.this, ListActivity.class);
-                                intent.putParcelableArrayListExtra("contents", result);
+                                intent.putExtra("contents", new Pruefung(result));
                                 MainActivity.this.startActivity(intent);
                             }
                         }
                     }
-                }).execute(AsyncTaskOperationEnum.GET_DATA.getText(),
-                        prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(),
-                                true) ? "1" : "0",
+                }).execute(AsyncTaskOperationEnum.GET_DATA,
+                        prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true),
                         "SELECT gt.bezeichnung AS geraetename, gt.headertext, gt.footertext, h.bezeichnung AS herstellername, p.idkriterium, p.text, p.anzeigeart, g.geraete_barcode " +
                                 "FROM geraete g LEFT JOIN geraetetypen gt ON(gt.idgeraetetyp = g.idgeraetetyp) " +
                                 "LEFT JOIN hersteller h ON (h.idhersteller = gt.idhersteller) " +
                                 "RIGHT JOIN pruefkriterien p ON (p.idgeraetetyp = gt.idgeraetetyp) " +
-                                "WHERE g.geraete_barcode = '" + barcode + "'");
+                                "WHERE g.geraete_barcode = '" + barcode + "' ORDER BY p.idkriterium ASC");
             } catch (MalformedURLException e) {
                 Toast.makeText(this, "URL nicht korrekt", Toast.LENGTH_SHORT);
             }

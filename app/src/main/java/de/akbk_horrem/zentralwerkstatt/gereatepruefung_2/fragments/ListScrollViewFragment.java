@@ -1,6 +1,5 @@
 package de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,37 +12,34 @@ import android.view.ViewGroup;
 import android.widget.ListView;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.R;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.adapter.ListAdapter;
-import java.util.ArrayList;
+import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.Pruefung;
 
 public class ListScrollViewFragment extends ListFragment {
-    private static final String ARG_PARAMS = "list";
+    private static final String PRUEFUNG = "pruefung", ENABLED = "enabled";
     private ListView listView;
     private OnFragmentInteractionListener mListener;
-    private ArrayList<ContentValues> valuesArray;
 
     public interface OnFragmentInteractionListener {
         void onFragmentInteraction(Uri uri);
     }
 
-    public static ListScrollViewFragment newInstance(ArrayList<Parcelable> params) {
+    public static ListScrollViewFragment newInstance(Pruefung pruefung, boolean enabled) {
         ListScrollViewFragment fragment = new ListScrollViewFragment();
         Bundle args = new Bundle();
-        args.putParcelableArrayList(ARG_PARAMS, params);
+        args.putParcelable(PRUEFUNG, pruefung);
+        args.putBoolean(ENABLED, enabled);
         fragment.setArguments(args);
         return fragment;
     }
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            this.valuesArray = getArguments().getParcelableArrayList(ARG_PARAMS);
-        }
     }
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_list_scroll_view, container, false);
-        this.listView = (ListView) view.findViewById(R.id.listScrollView);
-        this.listView.setAdapter(new ListAdapter(getContext(), this.valuesArray));
+        this.listView = view.findViewById(R.id.listScrollView);
+        this.listView.setAdapter(new ListAdapter(getContext(), (Pruefung) getArguments().getParcelable(PRUEFUNG), getArguments().getBoolean(ENABLED)));
         return view;
     }
 
@@ -87,7 +83,16 @@ public class ListScrollViewFragment extends ListFragment {
         ((ListAdapter) this.listView.getAdapter()).checkAll();
     }
 
+    @Override
     public ListView getListView() {
         return this.listView;
+    }
+
+    public Parcelable getListState(){
+        return getListView().onSaveInstanceState();
+    }
+
+    public void setListState(Parcelable listState){
+        getListView().onRestoreInstanceState(listState);
     }
 }

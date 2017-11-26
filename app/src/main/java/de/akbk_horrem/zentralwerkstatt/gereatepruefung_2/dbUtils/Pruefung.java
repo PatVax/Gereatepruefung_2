@@ -4,7 +4,12 @@ import android.content.ContentValues;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 
 /**
  * Created by Patryk on 07.11.2017.
@@ -12,8 +17,13 @@ import java.util.ArrayList;
 
 public class Pruefung implements Parcelable {
 
+    private final SimpleDateFormat dateFormatIn = new SimpleDateFormat("yyyy-MM-dd"), dateFormatOut = new SimpleDateFormat("dd.MM.yyyy");
+
     private ArrayList<ContentValues> kriterien, values;
+
     private String bemerkungen, geraeteName, herstellerName, headerText, footerText, barcode;
+
+    private Date datum;
 
     public Pruefung(ArrayList<ContentValues> contentValuesArray) throws IllegalArgumentException {
         if(!(contentValuesArray.get(0).containsKey("geraetename") &&
@@ -26,10 +36,15 @@ public class Pruefung implements Parcelable {
                 contentValuesArray.get(0).containsKey("anzeigeart")))
             throw new IllegalArgumentException("Die Inhalte der übergebenen Liste hatten das falsche Format");
         this.bemerkungen = contentValuesArray.get(0).containsKey("bemerkungen") ? contentValuesArray.get(0).getAsString("bemerkungen") : "";
-        this.geraeteName = contentValuesArray.get(0).getAsString("geraeteName");
-        this.herstellerName = contentValuesArray.get(0).getAsString("herstellerName");
-        this.headerText = contentValuesArray.get(0).getAsString("headerText");
-        this.footerText = contentValuesArray.get(0).getAsString("footerText");
+        try {
+            this.datum = contentValuesArray.get(0).containsKey("datum") ? dateFormatIn.parse(contentValuesArray.get(0).getAsString("datum")) : new Date(Calendar.getInstance().getTimeInMillis());
+        }catch(ParseException e) {
+            throw new IllegalArgumentException("Das Datum in der übergebenen Liste hatte das falsche Format");
+        }
+        this.geraeteName = contentValuesArray.get(0).getAsString("geraetename");
+        this.herstellerName = contentValuesArray.get(0).getAsString("herstellername");
+        this.headerText = contentValuesArray.get(0).getAsString("headertext");
+        this.footerText = contentValuesArray.get(0).getAsString("footertext");
         this.barcode = contentValuesArray.get(0).getAsString("geraete_barcode");
         this.kriterien = new ArrayList<>();
         this.values = new ArrayList<>();
@@ -57,28 +72,6 @@ public class Pruefung implements Parcelable {
             }
             this.values = getDefaultValues(this.kriterien);
         }
-    }
-
-    public Pruefung(ArrayList<ContentValues> kriterien, ArrayList<ContentValues> values, String bemerkungen, String geraeteName, String herstellerName, String headerText, String footerText, String barcode) throws IllegalArgumentException {
-        if(!(kriterien.get(0).containsKey("bemerkungen") &&
-                kriterien.get(0).containsKey("geraeteName") &&
-                kriterien.get(0).containsKey("herstellerName") &&
-                kriterien.get(0).containsKey("headerText") &&
-                kriterien.get(0).containsKey("footerText") &&
-                kriterien.get(0).containsKey("geraete_barcode") &&
-                kriterien.get(0).containsKey("idkriterium") &&
-                kriterien.get(0).containsKey("text") &&
-                kriterien.get(0).containsKey("anzeigeart") &&
-                kriterien.size() == values.size()))
-            throw new IllegalArgumentException("Die Inhalte der übergebenen Liste hatten das falsche Format");
-        this.kriterien = kriterien;
-        this.values = values;
-        this.bemerkungen = bemerkungen;
-        this.geraeteName = geraeteName;
-        this.herstellerName = herstellerName;
-        this.headerText = headerText;
-        this.footerText = footerText;
-        this.barcode = barcode;
     }
 
     private ArrayList<ContentValues> getDefaultValues(ArrayList<ContentValues> contentValuesArray) throws IllegalArgumentException {
@@ -121,6 +114,7 @@ public class Pruefung implements Parcelable {
         parcel.writeString(headerText);
         parcel.writeString(footerText);
         parcel.writeString(barcode);
+        parcel.writeValue(this.datum);
     }
 
     public static final Parcelable.Creator<Pruefung> CREATOR
@@ -145,6 +139,56 @@ public class Pruefung implements Parcelable {
         headerText = in.readString();
         footerText = in.readString();
         barcode = in.readString();
+        datum = (Date) in.readValue(Date.class.getClassLoader());
     }
+
+    public ArrayList<ContentValues> getKriterien() {
+        return kriterien;
+    }
+
+    public ArrayList<ContentValues> getValues() {
+        return values;
+    }
+
+    public String getBemerkungen() {
+        return bemerkungen;
+    }
+
+    public String getGeraeteName() {
+        return geraeteName;
+    }
+
+    public String getHerstellerName() {
+        return herstellerName;
+    }
+
+    public String getHeaderText() {
+        return headerText;
+    }
+
+    public String getFooterText() {
+        return footerText;
+    }
+
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public Date getDatum() {
+        return datum;
+    }
+
+    public String getFormatDatum() {
+        return dateFormatOut.format(this.datum);
+    }
+
+    public int getCount(){
+        return this.kriterien.size();
+    }
+
+    public void setBemerkungen(String bemerkungen) {
+        this.bemerkungen = bemerkungen;
+    }
+
 
 }

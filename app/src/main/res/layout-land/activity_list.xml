@@ -24,7 +24,7 @@
         android:layout_marginRight="@dimen/list_activity_margin"
         android:maxLines="5"
         android:ems="10"
-        android:inputType="text|textCapCharacters|textCapWords|textCapSentences|textAutoCorrect|textAutoComplete|textMultiLine|textImeMultiLine|textNoSuggestions|textUri|textEmailAddress|textEmailSubject|textShortMessage|textLongMessage|textPersonName|textPostalAddress|textPassword|textVisiblePassword|textWebEditText|textFilter|textPhonetic|textWebEmailAddress|textWebPassword|phone" />
+        android:inputType="text|textCapSentences|textAutoCorrect|textAutoComplete|textMultiLine|textImeMultiLine" />
     <LinearLayout android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">

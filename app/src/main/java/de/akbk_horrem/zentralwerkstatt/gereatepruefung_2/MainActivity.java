@@ -262,7 +262,6 @@ public class MainActivity extends AppCompatActivity implements MainFragment.OnFr
             }
         } else {
             try {
-                String str;
                 DBAsyncTask.getInstance(this, new DBAsyncResponse() {
                     public void processFinish(ArrayList<ContentValues> result) {
                         if ((result.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText()))) {
@@ -277,11 +276,7 @@ public class MainActivity extends AppCompatActivity implements MainFragment.OnFr
                     }
                 }).execute(AsyncTaskOperationEnum.GET_DATA,
                         prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true),
-                        "SELECT gt.bezeichnung AS geraetename, gt.headertext, gt.footertext, h.bezeichnung AS herstellername, p.idkriterium, p.text, p.anzeigeart, g.geraete_barcode " +
-                                "FROM geraete g LEFT JOIN geraetetypen gt ON(gt.idgeraetetyp = g.idgeraetetyp) " +
-                                "LEFT JOIN hersteller h ON (h.idhersteller = gt.idhersteller) " +
-                                "RIGHT JOIN pruefkriterien p ON (p.idgeraetetyp = gt.idgeraetetyp) " +
-                                "WHERE g.geraete_barcode = '" + barcode + "' ORDER BY p.idkriterium ASC");
+                        "CALL getpruefliste(" + barcode + ")");
             } catch (MalformedURLException e) {
                 Toast.makeText(this, "URL nicht korrekt", Toast.LENGTH_SHORT);
             }

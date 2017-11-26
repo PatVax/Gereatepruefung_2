@@ -5,6 +5,7 @@ import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.support.annotation.Nullable;
 import android.util.Pair;
 import android.widget.Toast;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.SharedPreferenceEnum;
@@ -204,7 +205,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
                 try {
 
                     if (checkConnection()) {
-                        reader = getReader(AsyncTaskOperationEnum.GET_DATABASE_USER.getText(), this.ROOT_PASSWORT, this.LINK);
+                        reader = getReader(AsyncTaskOperationEnum.GET_DATABASE_USER.getText(), null, this.ROOT_PASSWORT, this.LINK);
                         line = reader.readLine();
                         reader.close();
                         result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), line != null ? DBConnectionStatusEnum.CONNECTED.getText() : DBConnectionStatusEnum.CONNECTION_FAILED.getText());
@@ -228,7 +229,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
 
                     if (checkConnection()) {
                         publishProgress(createProgressList("Übertragen", "Daten werden übertragen"));
-                        reader = getReader(params[2], this.ROOT_PASSWORT, this.LINK);
+                        reader = getReader(params[0], params[2], this.ROOT_PASSWORT, this.LINK);
                         publishProgress(createProgressList("Verarbeiten", "Daten werden verarbeitet"));
                         line = reader.readLine();
 
@@ -260,7 +261,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
                     if (checkConnection()) {
 
                         publishProgress(createProgressList("Übertragen", "Daten werden übertragen"));
-                        reader = getReader(params[2], this.ROOT_PASSWORT, this.LINK);
+                        reader = getReader(params[0], params[2], this.ROOT_PASSWORT, this.LINK);
                         line = reader.readLine();
 
                         if (line.trim().equals("1"))
@@ -314,7 +315,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
                     toast = Toast.makeText(this.CONTEXT, "Anmeldung Erfolgreich", Toast.LENGTH_SHORT);
                     break;
                 case "barcode_failed":
-                    toast = Toast.makeText(this.CONTEXT, "Barcode nicht hinterlegt", Toast.LENGTH_SHORT);
+                    toast = Toast.makeText(this.CONTEXT, "Prüfung nicht hinterlegt", Toast.LENGTH_SHORT);
                     break;
                 case "database_failed":
                     toast = Toast.makeText(this.CONTEXT, "Datenbank nicht erreicht", Toast.LENGTH_SHORT);
@@ -369,7 +370,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
         return list.toArray(new Pair[list.size()]);
     }
 
-    private BufferedReader getReader(String anfrage, String rootPasswort, URL urlConnection) throws IOException, NoSuchAlgorithmException, KeyManagementException {
+    private BufferedReader getReader(String operationString, @Nullable String anfrage, String rootPasswort, URL urlConnection) throws IOException, NoSuchAlgorithmException, KeyManagementException {
         URLConnection connection;
         if (this.LINK.getProtocol().equals("https")) {
             SSLContext sc = SSLContext.getInstance("TLS");
@@ -391,7 +392,9 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
         }
         OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
         writer.write(URLEncoder.encode("url", "ISO-8859-1") + "="
-                + URLEncoder.encode(anfrage, "ISO-8859-1") + "&"
+                + URLEncoder.encode(operationString, "ISO-8859-1") + "&"
+                + URLEncoder.encode("sql", "ISO-8859-1") + "="
+                + URLEncoder.encode(anfrage != null ? anfrage : "", "ISO-8859-1") + "&"
                 + URLEncoder.encode("user", "ISO-8859-1") + "="
                 + URLEncoder.encode(this.BENUTZER, "ISO-8859-1") + "&"
                 + URLEncoder.encode("pass", "ISO-8859-1") + "="
@@ -407,7 +410,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
         BufferedReader reader;
         String line;
         try {
-            reader = getReader(AsyncTaskOperationEnum.CHECK_CONNECTION.getText(), this.ROOT_PASSWORT, this.LINK);
+            reader = getReader(AsyncTaskOperationEnum.CHECK_CONNECTION.getText(), null, this.ROOT_PASSWORT, this.LINK);
             line = reader.readLine();
             reader.close();
 
@@ -423,7 +426,7 @@ public class DBAsyncTask extends AsyncTask<String, Pair, ArrayList<ContentValues
         String line;
 
         try{
-            reader = getReader(AsyncTaskOperationEnum.LOGIN.getText(), this.ROOT_PASSWORT, this.LINK);
+            reader = getReader(AsyncTaskOperationEnum.LOGIN.getText(), null, this.ROOT_PASSWORT, this.LINK);
             line = reader.readLine();
             reader.close();
 

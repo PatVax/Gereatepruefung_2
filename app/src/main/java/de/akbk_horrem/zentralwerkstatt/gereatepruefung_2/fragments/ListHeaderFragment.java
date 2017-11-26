@@ -1,36 +1,37 @@
 package de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Parcelable;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.R;
-import java.util.ArrayList;
+import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.Pruefung;
 
 public class ListHeaderFragment extends Fragment {
-    private static final String ARG_PARAMS = "list";
+    private static final String ARG_PARAMS = "pruefung";
     private static boolean showing = true;
     private TextView footerTextView;
     private TextView geraetetypTextViewRight;
     private TextView headerTextView;
     private TextView herstellerTextViewRight;
+    private TextView barcodeTextViewRight;
+    private TextView datumTextViewRight;
     private OnFragmentInteractionListener mListener;
-    private ArrayList<ContentValues> valuesArray;
+    private Pruefung pruefung;
 
     public interface OnFragmentInteractionListener {
         void onFragmentInteraction(Uri uri);
     }
 
-    public static ListHeaderFragment newInstance(ArrayList<Parcelable> params) {
+    public static ListHeaderFragment newInstance(Pruefung pruefung) {
         ListHeaderFragment fragment = new ListHeaderFragment();
         Bundle args = new Bundle();
-        args.putParcelableArrayList(ARG_PARAMS, params);
+        args.putParcelable(ARG_PARAMS, pruefung);
         fragment.setArguments(args);
         return fragment;
     }
@@ -38,29 +39,38 @@ public class ListHeaderFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            this.valuesArray = getArguments().getParcelableArrayList(ARG_PARAMS);
+            this.pruefung = getArguments().getParcelable(ARG_PARAMS);
         }
     }
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_list_header, container, false);
-        this.geraetetypTextViewRight = (TextView) view.findViewById(R.id.geraetetypTextViewRight);
-        this.herstellerTextViewRight = (TextView) view.findViewById(R.id.herstellerTextViewRight);
-        this.headerTextView = (TextView) view.findViewById(R.id.headerTextView);
-        this.footerTextView = (TextView) view.findViewById(R.id.footerTextView);
-        this.geraetetypTextViewRight.setText(((ContentValues) this.valuesArray.get(0)).getAsString("GeraeteName"));
-        this.herstellerTextViewRight.setText(((ContentValues) this.valuesArray.get(0)).getAsString("HerstellerName"));
-        if (((ContentValues) this.valuesArray.get(0)).getAsString("HeaderText").equals("")) {
+        this.geraetetypTextViewRight = view.findViewById(R.id.geraetetypTextViewRight);
+        this.herstellerTextViewRight = view.findViewById(R.id.herstellerTextViewRight);
+        this.barcodeTextViewRight = view.findViewById(R.id.barcodeTextViewRight);
+        this.datumTextViewRight = view.findViewById(R.id.datumTextViewRight);
+        this.headerTextView = view.findViewById(R.id.headerTextView);
+        this.footerTextView = view.findViewById(R.id.footerTextView);
+        updateView(null);
+        return view;
+    }
+
+    public void updateView(@Nullable Pruefung pruefung) {
+        if (pruefung != null) this.pruefung = pruefung;
+        this.geraetetypTextViewRight.setText(this.pruefung.getGeraeteName());
+        this.herstellerTextViewRight.setText(this.pruefung.getHerstellerName());
+        this.barcodeTextViewRight.setText(this.pruefung.getBarcode());
+        this.datumTextViewRight.setText(this.pruefung.getFormatDatum());
+        if (this.pruefung.getHeaderText() == null || this.pruefung.getHeaderText().equals("")) {
             this.headerTextView.setVisibility(View.GONE);
         } else {
-            this.headerTextView.setText(((ContentValues) this.valuesArray.get(0)).getAsString("HeaderText"));
+            this.headerTextView.setText(this.pruefung.getHeaderText());
         }
-        if (((ContentValues) this.valuesArray.get(0)).getAsString("FooterText").equals("")) {
+        if (this.pruefung.getFooterText() == null || this.pruefung.getFooterText().equals("")) {
             this.footerTextView.setVisibility(View.GONE);
         } else {
-            this.footerTextView.setText(((ContentValues) this.valuesArray.get(0)).getAsString("FooterText"));
+            this.footerTextView.setText(this.pruefung.getFooterText());
         }
-        return view;
     }
 
     public void onButtonPressed(Uri uri) {

@@ -11,6 +11,8 @@ import android.os.Parcelable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -19,6 +21,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.adapter.ListAdapter;
+import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.Pruefung;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.AsyncTaskOperationEnum;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.DBConnectionStatusEnum;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.SharedPreferenceEnum;
@@ -29,33 +32,52 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.interfaces.DBAsyncRespo
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.mainDB.DBAsyncTask;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Stack;
 
 public class ListActivity extends AppCompatActivity implements OnFragmentInteractionListener, ListHeaderFragment.OnFragmentInteractionListener {
     private static final String SHARED_PREFERENCES = SharedPreferenceEnum.SHARED_PREFERENCE.getText();
     private EditText bemerkungenEditText;
-    private Button checkAllButton;
+    private Button checkAllButton, submitButton;
     private ListHeaderFragment listHeaderFragment;
     private ListScrollViewFragment listScrollViewFragment;
-    Parcelable listState;
+    private Stack<Pruefung> pruefungStack = new Stack<>();
+    Stack<Parcelable> listStates = new Stack<>();
     private Menu menu;
-    private Button submitButton;
-    private ArrayList<ContentValues> values;
-    ArrayList<ContentValues> valuesArray;
-    ContentValues viewStates;
+
+    @Override
+    public void onBackPressed() {
+        if(pruefungStack.size() > 1) {
+        pruefungStack.pop();
+        updateActivity();
+        listScrollViewFragment.setListState(listStates.pop());
+    }else super.onBackPressed();
+    }
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST);
-        setContentView((int) R.layout.activity_list);
-        this.listScrollViewFragment = ListScrollViewFragment.newInstance(getIntent().getParcelableArrayListExtra("contents"));
-        this.listHeaderFragment = ListHeaderFragment.newInstance(getIntent().getParcelableArrayListExtra("contents"));
-        this.bemerkungenEditText = (EditText) findViewById(R.id.bemerkungenEditText);
-        this.checkAllButton = (Button) findViewById(R.id.checkAllButton);
-        this.submitButton = (Button) findViewById(R.id.submitButton);
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.replace(R.id.listScrollViewFragment, this.listScrollViewFragment);
-        transaction.replace(R.id.listHeaderFragment, this.listHeaderFragment);
-        transaction.commit();
+        setContentView(R.layout.activity_list);
+        this.pruefungStack.push((Pruefung) getIntent().getParcelableExtra("contents"));
+        this.checkAllButton = findViewById(R.id.checkAllButton);
+        this.submitButton = findViewById(R.id.submitButton);
+        this.bemerkungenEditText = findViewById(R.id.bemerkungenEditText);
+        this.bemerkungenEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                pruefungStack.peek().setBemerkungen(charSequence.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
+        updateActivity();
     }
 
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -72,18 +94,69 @@ public class ListActivity extends AppCompatActivity implements OnFragmentInterac
     }
 
     public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.menu_hideHeader) {
-            if (this.listHeaderFragment.isShowing()) {
+        SharedPreferences prefs = getSharedPreferences(this.SHARED_PREFERENCES, MODE_PRIVATE);
+        switch (item.getItemId())
+        {
+            case R.id.menu_hideHeader:
+                if (this.listHeaderFragment.isShowing()) {
                 this.listHeaderFragment.hide();
                 item.setVisible(false);
                 this.menu.getItem(3).setVisible(true);
             }
-        } else if (item.getItemId() == R.id.menu_showHeader && !this.listHeaderFragment.isShowing()) {
-            this.listHeaderFragment.show();
-            item.setVisible(false);
-            this.menu.getItem(2).setVisible(true);
+                break;
+            case R.id.menu_showHeader:
+                if(!this.listHeaderFragment.isShowing()) {
+                    this.listHeaderFragment.show();
+                    item.setVisible(false);
+                    this.menu.getItem(2).setVisible(true);
+                }
+                break;
+            case R.id.menu_previousList:
+                String sql = "CALL getpruefung(" + (pruefungStack.size() - 1) + ", '" + pruefungStack.peek().getBarcode() + "')";
+                try {
+                    DBAsyncTask.getInstance(this, new DBAsyncResponse() {
+                        @Override
+                        public void processFinish(ArrayList<ContentValues> result) {
+                            if ((result.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText()))) {
+                                result.remove(0);
+                                pruefungStack.push(new Pruefung(result));
+                                listStates.push(listScrollViewFragment.getListState());
+                                updateActivity();
+                            }
+                        }
+                    }).execute(AsyncTaskOperationEnum.GET_DATA, prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true), sql);
+                } catch (MalformedURLException e) {
+                    Toast.makeText(this, "URL nicht korrekt", Toast.LENGTH_SHORT);
+                }
+                break;
+            case R.id.menu_nextList:
+                if(pruefungStack.size() > 1) {
+                    pruefungStack.pop();
+                    updateActivity();
+                    listScrollViewFragment.setListState(listStates.pop());
+                }
+                break;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void updateActivity() {
+        this.listScrollViewFragment = ListScrollViewFragment.newInstance(this.pruefungStack.peek(), !(pruefungStack.size() > 1));
+        this.listHeaderFragment = ListHeaderFragment.newInstance(this.pruefungStack.peek());
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+        transaction.replace(R.id.listScrollViewFragment, this.listScrollViewFragment);
+        transaction.replace(R.id.listHeaderFragment, this.listHeaderFragment);
+        transaction.commitNow();
+        this.bemerkungenEditText.setText(pruefungStack.peek().getBemerkungen());
+        if((pruefungStack.size() > 1)){
+           this.checkAllButton.setVisibility(View.GONE);
+           this.submitButton.setVisibility(View.GONE);
+           this.bemerkungenEditText.setEnabled(false);
+        }else{
+            this.checkAllButton.setVisibility(View.VISIBLE);
+            this.submitButton.setVisibility(View.VISIBLE);
+            this.bemerkungenEditText.setEnabled(true);
+        }
     }
 
     public void onAttachFragment(Fragment fragment) {
@@ -97,9 +170,8 @@ public class ListActivity extends AppCompatActivity implements OnFragmentInterac
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
         if (savedInstanceState != null) {
-            this.listState = savedInstanceState.getParcelable("list_state");
-            this.valuesArray = savedInstanceState.getParcelableArrayList("list_items");
-            this.viewStates = (ContentValues) savedInstanceState.getParcelable("list_items_state");
+            this.listStates = (Stack<Parcelable>) savedInstanceState.getSerializable("list_states");
+            this.pruefungStack = (Stack<Pruefung>) savedInstanceState.getSerializable("pruefungStack");
             if (savedInstanceState.getBoolean("bemerkungen_is_showing")) {
                 this.bemerkungenEditText.setVisibility(View.VISIBLE);
             } else {
@@ -110,21 +182,20 @@ public class ListActivity extends AppCompatActivity implements OnFragmentInterac
 
     protected void onResume() {
         super.onResume();
-        if (this.listState != null) {
-            this.listScrollViewFragment.setListAdapter(new ListAdapter(this, this.valuesArray, this.viewStates));
-            this.listScrollViewFragment.getListView().onRestoreInstanceState(this.listState);
+        if (this.listStates.size() > 0) {
+            this.listScrollViewFragment.setListAdapter(new ListAdapter(this, pruefungStack.peek(), !(pruefungStack.size() > 1)));
+            this.listScrollViewFragment.setListState(this.listStates.pop());
         }
-        this.listState = null;
         if (!this.listHeaderFragment.isShowing()) {
             this.listHeaderFragment.hide();
         }
     }
 
     protected void onSaveInstanceState(Bundle outState) {
-        outState.putParcelable("list_state", this.listScrollViewFragment.getListView().onSaveInstanceState());
-        outState.putParcelableArrayList("list_items", ((ListAdapter) this.listScrollViewFragment.getListView().getAdapter()).getValuesArray());
-        outState.putParcelable("list_items_state", ((ListAdapter) this.listScrollViewFragment.getListView().getAdapter()).getCurrentViewState());
-        outState.putBoolean("bemerkungen_is_showing", this.bemerkungenEditText.getVisibility() == 0);
+        listStates.push(this.listScrollViewFragment.getListState());
+        outState.putSerializable("list_states", listStates);
+        outState.putSerializable("pruefungStack", pruefungStack);
+        outState.putBoolean("bemerkungen_is_showing", this.bemerkungenEditText.getVisibility() == View.VISIBLE);
         super.onSaveInstanceState(outState);
     }
 
@@ -147,76 +218,54 @@ public class ListActivity extends AppCompatActivity implements OnFragmentInterac
                 }).show();
                 return;
             case R.id.bemerkungenButton:
-                if (this.bemerkungenEditText.getVisibility() == 8) {
-                    this.bemerkungenEditText.setVisibility(0);
+                if (this.bemerkungenEditText.getVisibility() == View.GONE) {
+                    this.bemerkungenEditText.setVisibility(View.VISIBLE);
                     return;
-                } else if (this.bemerkungenEditText.getVisibility() == 0) {
-                    this.bemerkungenEditText.setVisibility(8);
+                } else if (this.bemerkungenEditText.getVisibility() == View.VISIBLE) {
+                    this.bemerkungenEditText.setVisibility(View.GONE);
                     return;
                 } else {
-                    this.bemerkungenEditText.setVisibility(0);
+                    this.bemerkungenEditText.setVisibility(View.VISIBLE);
                     return;
                 }
             case R.id.submitButton:
-                ListAdapter bufferListAdapter = (ListAdapter) this.listScrollViewFragment.getListView().getAdapter();
-                final ArrayList<ContentValues> bufferValuesArray = bufferListAdapter.getValuesArray();
-                final ContentValues bufferCurrentViewState = bufferListAdapter.getCurrentViewState();
-                String sql = "INSERT INTO prüfungen (Geräte_Barcode, idBenutzer, Datum, Bemerkungen) VALUES ('" + ((ContentValues) bufferValuesArray.get(0)).getAsString("Geräte_Barcode") + "', (SELECT idBenutzer FROM Benutzer WHERE Benutzername = '" + prefs.getString(SharedPreferenceEnum.BENUTZER.getText(), "") + "'), CURDATE(), '" + this.bemerkungenEditText.getText().toString() + "')";
+                final Pruefung pruefung = this.pruefungStack.peek();
+                StringBuilder sqlBuilder = new StringBuilder();
+                sqlBuilder.append("INSERT INTO pruefungen (geraete_barcode, idbenutzer, datum, bemerkungen) VALUES ('" +
+                        pruefung.getBarcode() +
+                        "', (SELECT idbenutzer FROM benutzer WHERE benutzername = '" +
+                        prefs.getString(SharedPreferenceEnum.BENUTZER.getText(), "") +
+                        "'), CURDATE(), '" + pruefung.getBemerkungen() + "');");
+                sqlBuilder.append("INSERT INTO pruefergebnisse VALUES ");
+                for (int i = 0; i < pruefung.getKriterien().size() - 1; i++) {
+                    sqlBuilder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
+                            pruefung.getBarcode() + "' ORDER BY p.idpruefung DESC LIMIT 1), " +
+                            (pruefung.getKriterien().get(i)).getAsString("idkriterium") + ", '" +
+                            (pruefung.getKriterien().get(i).getAsString("anzeigeart").equals("b") ?
+                                    (pruefung.getValues().get(i).getAsBoolean("messwert") ? "true" : "false") :
+                                    pruefung.getValues().get(i).getAsString("messwert")) + "'),");
+                }
+                sqlBuilder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
+                        pruefung.getBarcode() + "' ORDER BY p.idpruefung DESC LIMIT 1), " +
+                        (pruefung.getKriterien().get(pruefung.getKriterien().size() - 1)).
+                                getAsString("idkriterium") + ", '" +
+                        (pruefung.getKriterien().get(pruefung.getKriterien().size() - 1).
+                                getAsString("anzeigeart").equals("b") ?
+                                (pruefung.getValues().get(pruefung.getValues().size() - 1).
+                                        getAsBoolean("messwert") ? "true" : "false") :
+                                pruefung.getValues().get(pruefung.getValues().size() - 1).
+                                        getAsString("messwert")) + "');");
                 try {
-                    DBAsyncTask dBAsyncTask = new DBAsyncTask(this, new DBAsyncResponse() {
+                    DBAsyncTask.getInstance(this, new DBAsyncResponse() {
+                        @Override
                         public void processFinish(ArrayList<ContentValues> result) {
-                            String sql = "INSERT INTO prüfergebnisse VALUES ";
-                            if (((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText())) {
-                                StringBuilder builder = new StringBuilder();
-                                String barcode = ((ContentValues) bufferValuesArray.get(0)).getAsString("Geräte_Barcode");
-                                for (int i = 0; i < bufferValuesArray.size() - 1; i++) {
-                                    String asString = ((ContentValues) bufferValuesArray.get(i)).getAsString("Anzeigeart");
-                                    int i2 = -1;
-                                    switch (asString.hashCode()) {
-                                        case 98:
-                                            if (asString.equals("b")) {
-                                                i2 = 0;
-                                                break;
-                                            }
-                                            break;
-                                    }
-                                    switch (i2) {
-                                        case 0:
-                                            builder.append("((SELECT p.IDPrüfung FROM prüfungen p WHERE p.geräte_barcode = '" + barcode + "' ORDER BY p.Datum DESC LIMIT 1), " + ((ContentValues) bufferValuesArray.get(i)).getAsString("IDKriterium") + ", '" + (bufferCurrentViewState.getAsBoolean(new StringBuilder().append("").append(i).toString()).booleanValue() ? "true" : "false") + "'),");
-                                            break;
-                                        default:
-                                            builder.append("((SELECT p.IDPrüfung FROM prüfungen p WHERE p.geräte_barcode = '" + barcode + "' ORDER BY p.Datum DESC LIMIT 1), " + ((ContentValues) bufferValuesArray.get(i)).getAsString("IDKriterium") + ", '" + bufferCurrentViewState.getAsString("" + i) + "'),");
-                                            break;
-                                    }
-                                }
-                                builder.append("((SELECT p.IDPrüfung FROM prüfungen p WHERE p.geräte_barcode = '" + barcode + "' ORDER BY p.Datum DESC LIMIT 1), " + ((ContentValues) bufferValuesArray.get(bufferValuesArray.size() - 1)).getAsString("IDKriterium") + ", '" + (bufferCurrentViewState.getAsBoolean(new StringBuilder().append("").append(bufferValuesArray.size() + -1).toString()).booleanValue() ? "true" : "false") + "')");
-                                try {
-                                    DBAsyncTask dBAsyncTask = new DBAsyncTask(ListActivity.this, new DBAsyncResponse() {
-                                        public void processFinish(ArrayList<ContentValues> result) {
-                                            if (((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText())) {
-                                                ListActivity.this.finish();
-                                            }
-                                        }
-                                    });
-                                    String[] strArr = new String[3];
-                                    strArr[0] = AsyncTaskOperationEnum.INSERT_DATA.getText();
-                                    strArr[1] = prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true) ? "1" : "0";
-                                    strArr[2] = sql + builder.toString().trim();
-                                    dBAsyncTask.execute(strArr);
-                                } catch (MalformedURLException e) {
-                                    Toast.makeText(ListActivity.this, "URL nicht korrekt", 0);
-                                }
+                            if ((result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText())) {
+                                ListActivity.this.finish();
                             }
                         }
-                    });
-                    String[] strArr = new String[3];
-                    strArr[0] = AsyncTaskOperationEnum.INSERT_DATA.getText();
-                    strArr[1] = prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true) ? "1" : "0";
-                    strArr[2] = sql;
-                    dBAsyncTask.execute(strArr);
-                    return;
-                } catch (MalformedURLException e) {
-                    Toast.makeText(this, "URL nicht korrekt", 0);
+                    }).execute(AsyncTaskOperationEnum.INSERT_DATA, prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true), sqlBuilder.toString().trim());
+                }catch(MalformedURLException e) {
+                    Toast.makeText(this, "URL nicht korrekt", Toast.LENGTH_SHORT);
                     return;
                 }
             default:

@@ -15,6 +15,8 @@
     <string name="hostTextView">Host:</string>
     <string name="list_geraet_text">Gerätetyp:</string>
     <string name="list_hersteller_text">Hersteller:</string>
+    <string name="list_barcode_text">Barcode:</string>
+    <string name="list_datum_text">Datum:</string>
     <string name="menu_barcode">Manuelle Eingabe</string>
     <string name="menu_manuelleEingabe">Manuelle Eingabe</string>
     <string name="offlineModeCheckBoxText">Offline-Modus einschalten</string>

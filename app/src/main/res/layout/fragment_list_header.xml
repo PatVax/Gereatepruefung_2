@@ -63,6 +63,24 @@
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/list_activity_margin">
         <TextView android:textSize="@dimen/list_activity_text_size"
+            android:id="@+id/seriennummerTextViewLeft"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/list_seriennummer_text"
+            android:layout_weight="0.0" />
+        <TextView android:textSize="@dimen/list_activity_text_size"
+            android:gravity="end"
+            android:id="@+id/seriennummerTextViewRight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:layout_weight="1.0" />
+    </LinearLayout>
+    <LinearLayout android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/list_activity_margin">
+        <TextView android:textSize="@dimen/list_activity_text_size"
             android:id="@+id/datumTextViewLeft"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

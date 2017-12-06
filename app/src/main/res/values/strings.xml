@@ -17,6 +17,7 @@
     <string name="list_hersteller_text">Hersteller:</string>
     <string name="list_barcode_text">Barcode:</string>
     <string name="list_datum_text">Datum:</string>
+    <string name="list_seriennummer_text">Seriennummer:</string>
     <string name="menu_barcode">Manuelle Eingabe</string>
     <string name="menu_manuelleEingabe">Manuelle Eingabe</string>
     <string name="offlineModeCheckBoxText">Offline-Modus einschalten</string>
@@ -25,7 +26,7 @@
     <string name="pfadEditTextHint">Dateipfad eingeben</string>
     <string name="pfadTextView">Pfad:</string>
     <string name="rootEditTextHint">Root-Passwort eingeben</string>
-    <string name="rootTextView">Root-Passwort:</string>
+    <string name="rootTextView">DB-Passwort:</string>
     <string name="showMessageCheckBoxText">Verbindungsmitteilungen anzeigen</string>
     <string name="submitButtonText">Ergbenisse senden</string>
     <string name="acceptVerbindungButton">Übernehmen</string>

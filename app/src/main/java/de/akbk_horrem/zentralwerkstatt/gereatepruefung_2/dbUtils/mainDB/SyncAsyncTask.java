@@ -3,15 +3,13 @@ package de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.mainDB;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.ContentValues;
-import android.content.SharedPreferences;
 import android.os.AsyncTask;
-import android.util.Pair;
+import android.support.annotation.Nullable;
 import android.widget.Toast;
 
+import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.DBUtils;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.AsyncTaskOperationEnum;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.DBConnectionStatusEnum;
-import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.SharedPreferenceEnum;
-import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.interfaces.DBAsyncResponse;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.BenutzerDBHelper;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.DBHelper;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.GeraeteDBHelper;
@@ -19,180 +17,250 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.Geraetet
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.KriterienDBHelper;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.PruefergebnisseDBHelper;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.tempDB.PruefungDBHelper;
-import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.interfaces.SyncAsyncResponse;
 
 import java.net.MalformedURLException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
-public class SyncAsyncTask extends AsyncTask<Void, Pair, Void> {
-    private static final String SHARED_PREFERENCE = SharedPreferenceEnum.SHARED_PREFERENCE.getText();
+/**
+ * AsyncTask für die Synchronisierung der Hauptdatenbank mit der temporären Datenbank
+ */
+public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
     private final Activity CONTEXT;
     private final ProgressDialog DIALOG;
-    private boolean connection;
-    private boolean dbAsyncStatus;
+    private DBConnectionStatusEnum dbConnectionStatusEnum;
+    private boolean connection = false, dbAsyncStatus = false, password = false, insert = false;
     DBHelper dbHelper;
-    private boolean password = false;
-    private SharedPreferences prefs;
     private ArrayList<ContentValues> result = null;
 
+    /**
+     * Erzeugt ein SyncAsyncTask-Objekt
+     * @param currentActivity Aktuelle Activity die den Task ausführt
+     */
     public SyncAsyncTask(Activity currentActivity) {
         this.CONTEXT = currentActivity;
-        this.prefs = this.CONTEXT.getSharedPreferences(SHARED_PREFERENCE, 0);
         this.DIALOG = new ProgressDialog(currentActivity);
     }
 
+    @Override
     protected void onPreExecute() {
         super.onPreExecute();
         this.DIALOG.setMessage("");
-        this.DIALOG.setTitle("");
+        this.DIALOG.setTitle("Synchronisieren");
         this.DIALOG.setCancelable(false);
-        this.DIALOG.setIndeterminate(true);
+        this.DIALOG.setIndeterminate(false);
         this.DIALOG.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        this.DIALOG.setMax(6);
         this.DIALOG.show();
     }
 
+    @Override
     protected Void doInBackground(Void... params) {
-        if (checkConnection()) {
-            ContentValues content;
+        //Verbindung wird geprüft
+        if (checkConnection("Verbindung wird geprüft", 0)) {
+
+            //Benutzerdaten aktualisieren
+            ArrayList<ContentValues> result;
             this.dbHelper = new BenutzerDBHelper(this.CONTEXT);
-            this.dbHelper.deleteAllFromTable();
-            this.result = getData("SELECT benutzername, passwort, administrator FROM benutzer", "Benutzerdaten", "Benutzerdaten werden aktualisiert");
+            ArrayList<ContentValues> benutzerBackup = dbHelper.getRows();
+            ArrayList<ContentValues> userList = new ArrayList<>();
+            try {
+                result = getData("SELECT benutzername, passwort FROM benutzer", "Benutzerdaten werden aktualisiert", 1);
+            }catch (SQLException e){
+                return null;
+            }
+                this.dbHelper.deleteAllFromTable();
             for(ContentValues contentValues : result) {
-                    ((BenutzerDBHelper) this.dbHelper).insertRow(contentValues.getAsString("benutzername"),
-                            contentValues.getAsString("passwort"),
-                            contentValues.getAsBoolean("administrator"));
+                userList.add(contentValues);
+                if(-1 == ((BenutzerDBHelper) this.dbHelper).insertRow(contentValues.getAsString("benutzername"),
+                        DBUtils.encodeRootPasswort(contentValues.getAsString("passwort")))) {
+                    dbHelper.insertAll(benutzerBackup);
+                    return null;
+                }
             }
 
-            ArrayList<Integer> ids = new ArrayList();
+            StringBuilder sqlBuilder = new StringBuilder();
 
-            this.dbHelper = new PruefungDBHelper(this.CONTEXT);
-            ArrayList<ContentValues> contents = ((PruefungDBHelper) this.dbHelper).getRowsByBenutzer(this.prefs.getString(SharedPreferenceEnum.BENUTZER.getText(), ""));
-            for(ContentValues contentValues : contents) {
-                    if (contentValues.getAsInteger("Password_Checked").intValue() != 1) {
-                        if (checkPruefungPassword(contentValues, "Prüfungen hochladen", "Prüfungen werden hochgeladen")) {
-                            ids.add(contentValues.getAsInteger("IDPruefung"));
-                        } else {
-                            ((PruefungDBHelper) this.dbHelper).deleteRowByIDPruefung(contentValues.getAsInteger("IDPruefung"));
+            //Prüfungen aller Benutzer hochladen
+            //Wenn das Passwort, dass zu der Zeitpunkt der Prüfung gespeichert wurde nicht mit dem aktuellen übereinstimmt werden diese gelöscht
+            for(ContentValues userValues : userList){
+
+                String user = userValues.getAsString("benutzername"),
+                        password = userValues.getAsString("passwort");
+
+                this.dbHelper = new PruefungDBHelper(this.CONTEXT);
+
+                ArrayList<ContentValues> resultPruefungen = ((PruefungDBHelper) this.dbHelper).getRowsByBenutzer(user);
+
+                //Für jede Prüfung
+                for(ContentValues contentValues : resultPruefungen) {
+                    this.dbHelper = new PruefungDBHelper(this.CONTEXT);
+
+                    String geraeteBarcode = contentValues.getAsString("geraete_barcode");
+                    long currentID = contentValues.getAsLong("idpruefung");
+                    if(((PruefungDBHelper) this.dbHelper).isPasswordEqualByIDPruefung(currentID, password)){
+                        ArrayList<ContentValues> resultPruefergebnissen;
+                        sqlBuilder.append("INSERT INTO pruefungen (geraete_barcode, idbenutzer, datum, bemerkungen) VALUES " +
+                                "('" + geraeteBarcode +
+                                "', (SELECT idbenutzer FROM benutzer WHERE benutzername = '" + user +
+                                "'), CURDATE(), '" +
+                                contentValues.getAsString("bemerkungen") + "');");
+
+                        sqlBuilder.append("INSERT INTO pruefergebnisse VALUES ");
+
+                        this.dbHelper = new PruefergebnisseDBHelper(this.CONTEXT);
+
+                        resultPruefergebnissen = ((PruefergebnisseDBHelper) this.dbHelper).getRowsByIDPruefung(currentID);
+
+                        //Für jedes Prüfergebnis
+                        for (ContentValues contentValues2 : resultPruefergebnissen){
+                            switch (contentValues2.getAsString("anzeigeart")) {
+                                case "b":
+                                    sqlBuilder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
+                                            geraeteBarcode + "' ORDER BY p.idpruefung DESC LIMIT 1), " +
+                                            contentValues2.getAsString("idkriterium") + ", '" + (contentValues2.getAsBoolean("messwert") ? "true" : "false") + "'),");
+                                    break;
+                                default:
+                                    sqlBuilder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
+                                            geraeteBarcode + "' ORDER BY p.idpruefung DESC LIMIT 1), " +
+                                            contentValues2.getAsString("idkriterium") + ", '" + contentValues2.getAsString("messwert") + "'),");
+                                    break;
+                            }
                         }
-                    }
-            }
-            StringBuilder builder = new StringBuilder("INSERT INTO pruefungen (geraete_barcode, idbenutzer, datum, bemerkungen) VALUES ");
-            for (int id : ids){
-                builder.append("('" + (contents.get(id)).getAsString("Geraete_Barcode") +
-                        "', '(SELECT idbenutzer FROM benutzer WHERE benutzername = " +
-                        (contents.get(id)).getAsString("benutzer") + ")', CURDATE(), '" +
-                        (contents.get(id)).getAsString("bemerkungen'),"));
-            }
-            builder.setCharAt(builder.length() - 1, ';');
-            insertData(builder.toString().trim(), "Prüfungen hochladen", "Prüfungen werden hochgeladen");
-            this.dbHelper = new PruefergebnisseDBHelper(this.CONTEXT);
-            builder = new StringBuilder("INSERT INTO pruefergebnisse VALUES ");
-            for (int id : ids){
-                for (ContentValues contentValues : new ArrayList<ContentValues>(((PruefergebnisseDBHelper) this.dbHelper).getRowsByID(id))){
-                    switch (contentValues.getAsString("anzeigeart")) {
-                        case "b":
-                            builder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
-                                    contentValues.getAsString("geraete_barcode") + "' ORDER BY p.datum DESC LIMIT 1), " +
-                                    contentValues.getAsString("idkriterium") + ", '" + (contentValues.getAsBoolean("Messwert") ? "true" : "false") + "'),");
-                            break;
-                        default:
-                            builder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
-                                    contentValues.getAsString("Geraete_Barcode") + "' ORDER BY p.Datum DESC LIMIT 1), " +
-                                    contentValues.getAsString("idKriterium") + ", '" + contentValues.getAsString("Messwert") + "'),");
-                            break;
+                        sqlBuilder.setCharAt(sqlBuilder.length() - 1, ';');
                     }
                 }
-                builder.setCharAt(builder.length() - 1, ';');
-                insertData(builder.toString().trim(), "Prüfungen hochladen", "Prüfergebnissen werden hochgeladen");
-                ((PruefergebnisseDBHelper) this.dbHelper).deleteRowByIDPruefung(id);
             }
+            if(sqlBuilder.length() > 0)
 
-            this.dbHelper = new GeraeteDBHelper(this.CONTEXT);
-            ids = new ArrayList();
-            this.dbHelper.deleteAllFromTable();
-            this.result = getData("SELECT g.geraete_barcode, g.idgeraetetyp, g.anschaffungsdatum, g.seriennummer FROM geraete g LEFT JOIN pruefungen p ON (g.geraete_barcode = p.geraete_barcode) WHERE DATEDIFF(CURDATE(), p.datum) >= 365 OR p.datum IS NULL", "Geräte", "Geräte werdem aktualisiert");
-            for (ContentValues contentValues : result){
-                ((GeraeteDBHelper) this.dbHelper).insertRow(contentValues.getAsString("geraete_barcode"), contentValues.getAsInteger("idgeraetetyp"), contentValues.getAsString("anschaffungsdatum"), contentValues.getAsString("seriennummer"));
-                if (!ids.contains(contentValues.getAsInteger("idgeraetetyp"))) {
-                    ids.add(contentValues.getAsInteger("idgeraetetyp"));
+                //Insert ausführen, bei Erfolg alle Prüfungen löschen
+                if (insertData(sqlBuilder.toString().trim(), "Prüfungen werden hochgeladen", 2)) {
+                    new PruefungDBHelper(this.CONTEXT).deleteAllFromTable();
+                    new PruefergebnisseDBHelper(this.CONTEXT).deleteAllFromTable();
                 }
-            }
 
-            this.dbHelper = new GeraetetypDBHelper(this.CONTEXT);
-            this.dbHelper.deleteAllFromTable();
-            this.result = getData("SELECT g.idgeraetetyp, h.bezeichnung, g.headertext, g.footertext, g.bezeichnung FROM geraetetypen g INNER JOIN hersteller h ON (g.idhersteller = h.idhersteller)", "Geräte", "Gerätetypen werden aktualisiert");
-            for (ContentValues contentValues : result){
-                if (ids.contains(contentValues.getAsInteger("idgeraetetyp"))) {
-                    ((GeraetetypDBHelper) this.dbHelper).insertRow(contentValues.getAsInteger("idgeraetetyp"), contentValues.getAsString("hersteller"), contentValues.getAsString("headertext"), contentValues.getAsString("footertext"), contentValues.getAsString("bezeichnung"));
-                }
-            }
+                //Restliche Daten werden geladen, beim Misserfolg werden die Daten unberüht wiederhergestellt
+            ArrayList<ContentValues> geraeteBackup = new GeraeteDBHelper(this.CONTEXT).getRows();
+            ArrayList<ContentValues> geraeteTypenBackup = new GeraetetypDBHelper(this.CONTEXT).getRows();
+            ArrayList<ContentValues> kriterienBackup = new KriterienDBHelper(this.CONTEXT).getRows();
 
-            this.dbHelper = new KriterienDBHelper(this.CONTEXT);
-            this.dbHelper.deleteAllFromTable();
-            this.result = getData("SELECT * FROM pruefkriterien WHERE status = TRUE", "Kriterien", "Kriterien werden aktualisiert");
-            for (ContentValues contentValues : result){
-                if (ids.contains(contentValues.getAsInteger("idgeraetetyp"))) {
-                    ((KriterienDBHelper) this.dbHelper).insertRow(contentValues.getAsInteger("idkriterium"), contentValues.getAsInteger("idgeraetetyp"), contentValues.getAsString("text"), contentValues.getAsString("anzeigeart"), contentValues.getAsBoolean("status") ? 1 : 0);
+            try {
+                this.dbHelper = new GeraeteDBHelper(this.CONTEXT);
+                this.dbHelper.deleteAllFromTable();
+                ArrayList<Long> ids = new ArrayList();
+                result = getData("SELECT g.geraete_barcode, g.idgeraetetyp, g.anschaffungsdatum, g.seriennummer FROM geraete g LEFT JOIN (SELECT MAX(datum) AS datum, geraete_barcode FROM pruefungen GROUP BY geraete_barcode) p ON (g.geraete_barcode = p.geraete_barcode) WHERE DATEDIFF(CURDATE(), p.datum) >= 365 OR p.datum IS NULL", "Geräte werden aktualisiert", 3);
+                for (ContentValues contentValues : result) {
+                    if(-1 == ((GeraeteDBHelper) this.dbHelper).insertRow(contentValues.getAsString("geraete_barcode"), contentValues.getAsInteger("idgeraetetyp"), contentValues.getAsString("anschaffungsdatum"), contentValues.getAsString("seriennummer"))) throw new SQLException();
+                    if (!ids.contains(contentValues.getAsLong("idgeraetetyp"))) {
+                        ids.add(contentValues.getAsLong("idgeraetetyp"));
+                    }
                 }
+
+                this.dbHelper = new GeraetetypDBHelper(this.CONTEXT);
+                this.dbHelper.deleteAllFromTable();
+                ContentValues contentValues;
+                for (long id : ids) {
+                    contentValues = getData("SELECT g.idgeraetetyp, h.bezeichnung AS hersteller, g.headertext, g.footertext, g.bezeichnung FROM geraetetypen g INNER JOIN hersteller h ON (g.idhersteller = h.idhersteller) WHERE idgeraetetyp = " + id, "Gerätetypen werden aktualisiert", 4).get(0);
+                    if(-1 == ((GeraetetypDBHelper) this.dbHelper).insertRow(contentValues.getAsInteger("idgeraetetyp"), contentValues.getAsString("hersteller"), contentValues.getAsString("headertext"), contentValues.getAsString("footertext"), contentValues.getAsString("bezeichnung"))) throw new SQLException();
+
+                }
+
+                this.dbHelper = new KriterienDBHelper(this.CONTEXT);
+                this.dbHelper.deleteAllFromTable();
+                for (long id : ids) {
+                    result = getData("SELECT idkriterium, idgeraetetyp, text, anzeigeart FROM pruefkriterien WHERE status = TRUE AND idgeraetetyp = " + id, "Kriterien werden aktualisiert", 5);
+                    for (ContentValues kriterien : result) {
+                        if(-1 == ((KriterienDBHelper) this.dbHelper).insertRow(kriterien.getAsLong("idkriterium"), kriterien.getAsInteger("idgeraetetyp"), kriterien.getAsString("text"), kriterien.getAsString("anzeigeart"))) throw new SQLException();
+                    }
+                }
+            } catch (SQLException e){
+                dbHelper = new GeraeteDBHelper(this.CONTEXT);
+                dbHelper.deleteAllFromTable();
+                dbHelper.insertAll(geraeteBackup);
+                dbHelper = new GeraetetypDBHelper(this.CONTEXT);
+                dbHelper.deleteAllFromTable();
+                dbHelper.insertAll(geraeteTypenBackup);
+                dbHelper = new KriterienDBHelper(this.CONTEXT);
+                dbHelper.deleteAllFromTable();
+                dbHelper.insertAll(kriterienBackup);
             }
         }
         return null;
     }
 
+    @Override
     protected void onPostExecute(Void o) {
         super.onPostExecute(o);
         this.DIALOG.hide();
         this.DIALOG.dismiss();
     }
 
-    protected void onProgressUpdate(Pair... values) {
+    @Override
+    protected void onProgressUpdate(ContentValues... values) {
         super.onProgressUpdate(values);
-        this.DIALOG.setMessage((String) values[1].second);
-        this.DIALOG.setTitle((String) values[0].second);
-        this.DIALOG.setProgress((int) values[3].second);
-        this.DIALOG.setMax((int) values[4].second);
+        ContentValues contentValues = values[0];
+        this.DIALOG.setMessage(contentValues.getAsString("message"));
+        this.DIALOG.setProgress(contentValues.getAsInteger("actualProgress"));
         try {
-            switch ((AsyncTaskOperationEnum) values[2].second) {
-                case LOGIN:
-                    DBAsyncTask.getLoginInstance(this.CONTEXT, new DBAsyncResponse() {
+
+            //Je nach Operation DBAsyncTask ausführen
+            switch (contentValues.getAsString("operation")) {
+                case "login":
+                    DBAsyncTask.getLoginInstance(this.CONTEXT, new DBAsyncTask.DBAsyncResponse() {
                         public void processFinish(ArrayList<ContentValues> resultArray) {
-                            if (((ContentValues) resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.LOGIN_SUCCESS.getText())) {
+                            if ((resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.LOGIN_SUCCESS.getText())) {
+                                dbConnectionStatusEnum = DBConnectionStatusEnum.LOGIN_SUCCESS;
                                 SyncAsyncTask.this.password = true;
                             } else {
+                                dbConnectionStatusEnum = DBConnectionStatusEnum.LOGIN_FAILED;
                                 SyncAsyncTask.this.password = false;
                             }
                             SyncAsyncTask.this.dbAsyncStatus = true;
                         }
-                    }, false, (String) values[6].second, (String) values[7].second).executeOnExecutor(AsyncTaskOperationEnum.LOGIN, false);
+                    }, false, contentValues.getAsString("user"), contentValues.getAsString("password")).executeOnExecutor(AsyncTaskOperationEnum.LOGIN, false);
                     break;
-                case CHECK_CONNECTION:
-                    DBAsyncTask.getInstance(this.CONTEXT, new DBAsyncResponse() {
+                case "check_connection":
+                    DBAsyncTask.getInstance(this.CONTEXT, new DBAsyncTask.DBAsyncResponse() {
                         public void processFinish(ArrayList<ContentValues> resultArray) {
-                            if (((ContentValues) resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText())) {
+                            if ((resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText())) {
+                                dbConnectionStatusEnum = DBConnectionStatusEnum.CONNECTED;
                                 SyncAsyncTask.this.connection = true;
                             } else {
+                                dbConnectionStatusEnum = DBConnectionStatusEnum.CONNECTION_FAILED;
                                 SyncAsyncTask.this.connection = false;
                             }
                             SyncAsyncTask.this.dbAsyncStatus = true;
                         }
                     }, false).executeOnExecutor(AsyncTaskOperationEnum.CHECK_CONNECTION, false);
                     break;
-                case GET_DATA:
-                    DBAsyncTask.getInstance(this.CONTEXT, new DBAsyncResponse() {
+                case "get_data":
+                    DBAsyncTask.getInstance(this.CONTEXT, new DBAsyncTask.DBAsyncResponse() {
                         public void processFinish(ArrayList<ContentValues> resultArray) {
-                            resultArray.remove(0);
-                            SyncAsyncTask.this.result = resultArray;
-                            SyncAsyncTask.this.dbAsyncStatus = true;
+                            if(resultArray.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText())) {
+                                dbConnectionStatusEnum = DBConnectionStatusEnum.SUCCESS;
+                                resultArray.remove(0);
+                                SyncAsyncTask.this.result = resultArray;
+                                SyncAsyncTask.this.dbAsyncStatus = true;
+                            } else {
+                                dbConnectionStatusEnum = DBConnectionStatusEnum.TRANSFER_FAILED;
+                            }
                         }
-                    }, false).executeOnExecutor((AsyncTaskOperationEnum) values[2].second, false, (String) values[5].second);
+                    }, false).executeOnExecutor(AsyncTaskOperationEnum.GET_DATA, false, contentValues.getAsString("sql"));
                     break;
-                case INSERT_DATA:
-                    DBAsyncTask.getInstance(this.CONTEXT, new DBAsyncResponse() {
+                case "insert_data":
+                    DBAsyncTask.getInstance(this.CONTEXT, new DBAsyncTask.DBAsyncResponse() {
                         public void processFinish(ArrayList<ContentValues> resultArray) {
-                            ContentValues result = (ContentValues) resultArray.get(0);
+                            if((resultArray.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.SUCCESS.getText())) {
+                                dbConnectionStatusEnum = DBConnectionStatusEnum.SUCCESS;
+                                insert = true;
+                            }
+                            else {
+                                dbConnectionStatusEnum = DBConnectionStatusEnum.INSERT_FAILED;
+                                insert = false;
+                            }
                             SyncAsyncTask.this.dbAsyncStatus = true;
                         }
-                    }, false).executeOnExecutor((AsyncTaskOperationEnum) values[2].second, false, (String) values[5].second);
+                    }, false).executeOnExecutor(AsyncTaskOperationEnum.GET_DATA, false, contentValues.getAsString("sql"));
                     break;
             }
         } catch (MalformedURLException e) {
@@ -200,21 +268,35 @@ public class SyncAsyncTask extends AsyncTask<Void, Pair, Void> {
         }
     }
 
-    private Pair[] createDBTaskList(AsyncTaskOperationEnum operation, String title, String message, int actualProgress, int maxProgress, String url, String benutzer, String password) {
-        ArrayList<Pair> list = new ArrayList();
-        list.add(new Pair("title", title));
-        list.add(new Pair("message", message));
-        list.add(new Pair("operation", operation));
-        list.add(new Pair("actualProgress", Integer.valueOf(actualProgress)));
-        list.add(new Pair("maxProgress", Integer.valueOf(maxProgress)));
-        list.add(new Pair("url", url));
-        list.add(new Pair("benutzer", benutzer));
-        list.add(new Pair("password", password));
-        return list.toArray(new Pair[list.size()]);
+    /**
+     * Erstellt ein ContentValues-Objekt, der folgende Parameter enthält
+     * @param operation Die von DBAsyncTask auszuführende Operation
+     * @param message Information die in dem Progress-Dialog angezeigt werden soll
+     * @param actualProgress Ein int der darstellt bei welchem Schritt sich der Task gerade befindet
+     * @param sql Die auszuführende SQL-Anweisungen
+     * @param user Benutzer falls eingeloggt werden soll
+     * @param password Passwort für den Benutzer
+     * @return Eine ContenValues mit den Parametern
+     */
+    private ContentValues createDBTaskList(AsyncTaskOperationEnum operation, String message, int actualProgress, @Nullable String sql, @Nullable String user, @Nullable String password) {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put("message", message);
+        contentValues.put("operation", operation.getText());
+        contentValues.put("actualProgress", actualProgress);
+        contentValues.put("sql", sql);
+        contentValues.put("user", user);
+        contentValues.put("password", password);
+        return contentValues;
     }
 
-    private boolean checkConnection() {
-        publishProgress(createDBTaskList(AsyncTaskOperationEnum.CHECK_CONNECTION, "", "", 0, 1, null, null, null));
+    /**
+     * Prüft die Verbindung mit der Datenbank
+     * @param message Information die in dem Progress-Dialog angezeigt werden soll
+     * @param actualProgress Ein int der darstellt bei welchem Schritt sich der Task gerade befindet
+     * @return True wenn Verbindung erfolgreich war
+     */
+    private boolean checkConnection(String message, int actualProgress) {
+        publishProgress(createDBTaskList(AsyncTaskOperationEnum.CHECK_CONNECTION, message, actualProgress, null, null, null));
         do {
         } while (!this.dbAsyncStatus);
         this.dbAsyncStatus = false;
@@ -225,29 +307,35 @@ public class SyncAsyncTask extends AsyncTask<Void, Pair, Void> {
         return true;
     }
 
-    private boolean checkPruefungPassword(ContentValues content, String title, String message) {
-        publishProgress(createDBTaskList(AsyncTaskOperationEnum.LOGIN, title, message, 1, 5, null, content.getAsString("Benutzer"), content.getAsString("Password")));
+    /**
+     * Fügt Daten in die Datenbank ein
+     * @param query SQL-Injection
+     * @param message Information die in dem Progress-Dialog angezeigt werden soll
+     * @param actualProgress Ein int der darstellt bei welchem Schritt sich der Task gerade befindet
+     * @return
+     */
+    private boolean insertData(String query, String message, int actualProgress) {
+        publishProgress(createDBTaskList(AsyncTaskOperationEnum.INSERT_DATA, message, actualProgress, query, null, null));
         do {
         } while (!this.dbAsyncStatus);
+        if(dbConnectionStatusEnum != DBConnectionStatusEnum.SUCCESS) return false;
         this.dbAsyncStatus = false;
-        if (!this.password) {
-            return false;
-        }
-        this.password = false;
-        return true;
+        return this.insert;
     }
 
-    private void insertData(String query, String title, String message) {
-        publishProgress(createDBTaskList(AsyncTaskOperationEnum.INSERT_DATA, title, message, 1, 5, query, null, null));
+    /**
+     * Lädt Daten aus der Datenbank
+     * @param query SQL-Query
+     * @param message Information die in dem Progress-Dialog angezeigt werden soll
+     * @param actualProgress Ein int der darstellt bei welchem Schritt sich der Task gerade befindet
+     * @return
+     * @throws SQLException
+     */
+    private ArrayList<ContentValues> getData(String query, String message, int actualProgress) throws SQLException{
+        publishProgress(createDBTaskList(AsyncTaskOperationEnum.GET_DATA, message, actualProgress, query, null, null));
         do {
         } while (!this.dbAsyncStatus);
-        this.dbAsyncStatus = false;
-    }
-
-    private ArrayList<ContentValues> getData(String query, String title, String message) {
-        publishProgress(createDBTaskList(AsyncTaskOperationEnum.GET_DATA, title, message, 1, 5, query, null, null));
-        do {
-        } while (!this.dbAsyncStatus);
+        if(dbConnectionStatusEnum != DBConnectionStatusEnum.SUCCESS) throw new SQLException("SQL-Anfrage hat kein Ergebnis geliefert");
         this.dbAsyncStatus = false;
         return this.result;
     }

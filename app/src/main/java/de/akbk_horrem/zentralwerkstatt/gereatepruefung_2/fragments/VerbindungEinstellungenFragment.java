@@ -3,7 +3,6 @@ package de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -11,6 +10,7 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -25,7 +25,6 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.R;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.AsyncTaskOperationEnum;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.DBConnectionStatusEnum;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.enums.SharedPreferenceEnum;
-import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.interfaces.DBAsyncResponse;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.mainDB.DBAsyncTask;
 
 /**
@@ -33,32 +32,30 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.mainDB.DBAsyncT
  * Activities that contain this fragment must implement the
  * {@link VerbindungEinstellungenFragment.OnFragmentInteractionListener} interface
  * to handle interaction events.
- * Use the {@link VerbindungEinstellungenFragment#newInstance} factory method to
- * create an instance of this fragment.
  */
 public class VerbindungEinstellungenFragment extends Fragment {
     private static final String SHARED_PREFERENCES = SharedPreferenceEnum.SHARED_PREFERENCE.getText();
-    private static boolean showing;
+    private static boolean showing = false; //Wird der Fragment angezeigt?
     private OnFragmentInteractionListener mListener;
     private CheckBox offlineModeCheckBox;
     private EditText pfadEditText;
     private EditText rootEditText;
-    private TextView rootTextView;
     private CheckBox showToastCheckBox;
     private EditText uriEditText;
 
     public interface OnFragmentInteractionListener {
+        /**
+         * Wird aufgerufen wenn Verbindung mit der Hauptdatenbank fehlschlägt
+         */
         void onConnectionFailed();
 
+        /**
+         * Wird aufgerufen wenn Verbindung mit der Hauptdatenbank erfolgreich abgeschlossen wird
+         */
         void onConnectionSucces();
-
-        void onFragmentInteraction(Uri uri);
     }
 
-    public static VerbindungEinstellungenFragment newInstance() {
-        return new VerbindungEinstellungenFragment();
-    }
-
+    @Override
     public void onAttach(Context context) {
         super.onAttach(context);
         if (context instanceof OnFragmentInteractionListener) {
@@ -68,64 +65,51 @@ public class VerbindungEinstellungenFragment extends Fragment {
         throw new RuntimeException(context.toString() + " must implement OnFragmentInteractionListener");
     }
 
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
     }
 
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+
+        //View vorbereiten
         View view = inflater.inflate(R.layout.fragment_verbindung_einstellungen, container, false);
-        this.uriEditText = (EditText) view.findViewById(R.id.uriEditText);
-        this.pfadEditText = (EditText) view.findViewById(R.id.pfadEditText);
-        this.rootEditText = (EditText) view.findViewById(R.id.rootEditText);
+
+        //Zuweisung der Views
+        this.uriEditText = view.findViewById(R.id.uriEditText);
+        this.pfadEditText = view.findViewById(R.id.pfadEditText);
+        this.rootEditText = view.findViewById(R.id.rootEditText);
         this.rootEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (6 != actionId) {
-                    return false;
+                //Falls Eingabe bestätigt wurde
+                if (EditorInfo.IME_ACTION_DONE == actionId) {
+                    VerbindungEinstellungenFragment.this.acceptConnection();
+                    return true;
                 }
-                VerbindungEinstellungenFragment.this.acceptConnection();
-                return true;
+                return false;
             }
         });
-        this.rootTextView = (TextView) view.findViewById(R.id.rootTextView);
-        try {
-            DBAsyncTask.getInstance(getActivity(), new DBAsyncResponse() {
-                public void processFinish(ArrayList<ContentValues> result) {
-                    if (((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()) == DBConnectionStatusEnum.CONNECTED.getText()) {
-                        VerbindungEinstellungenFragment.this.rootTextView.setText(((ContentValues) result.get(0)).getAsString(DBConnectionStatusEnum.DATABASE_USER.getText()) + "-Passwort");
-                    } else {
-                        VerbindungEinstellungenFragment.this.rootTextView.setText("Datenbankbenutzer-Passwort");
-                    }
-                }
-            }).execute(AsyncTaskOperationEnum.GET_DATABASE_USER, false);
-        } catch (MalformedURLException e) {
-        }
-        this.offlineModeCheckBox = (CheckBox) view.findViewById(R.id.offlineModeCheckBox);
+        this.offlineModeCheckBox = view.findViewById(R.id.offlineModeCheckBox);
         this.offlineModeCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                int i;
-                int i2 = 8;
-                SharedPreferences.Editor prefsEdit = VerbindungEinstellungenFragment.this.getActivity().getSharedPreferences(VerbindungEinstellungenFragment.SHARED_PREFERENCES, 0).edit();
-                VerbindungEinstellungenFragment.this.uriEditText.setVisibility(isChecked ? View.GONE : View.VISIBLE);
-                EditText access$300 = VerbindungEinstellungenFragment.this.pfadEditText;
-                if (isChecked) {
-                    i = 8;
-                } else {
-                    i = 0;
-                }
-                access$300.setVisibility(i);
-                EditText access$400 = VerbindungEinstellungenFragment.this.rootEditText;
-                if (!isChecked) {
-                    i2 = 0;
-                }
-                access$400.setVisibility(i2);
+                //Offline Modus umschalten
+                SharedPreferences.Editor prefsEdit = VerbindungEinstellungenFragment.this.getActivity().getSharedPreferences(VerbindungEinstellungenFragment.SHARED_PREFERENCES, Context.MODE_PRIVATE).edit();
+                uriEditText.setVisibility(isChecked ? View.GONE : View.VISIBLE);
+                pfadEditText.setVisibility(isChecked ? View.GONE : View.VISIBLE);
+                rootEditText.setVisibility(isChecked ? View.GONE : View.VISIBLE);
                 prefsEdit.putBoolean(SharedPreferenceEnum.OFFLINE_MODE.getText(), isChecked);
                 prefsEdit.apply();
+                mListener.onConnectionSucces();
+                if(isChecked) cancelConnection();
+                else acceptConnection();
             }
         });
-        this.showToastCheckBox = (CheckBox) view.findViewById(R.id.showMessageCheckBox);
+        this.showToastCheckBox = view.findViewById(R.id.showMessageCheckBox);
         this.showToastCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                SharedPreferences.Editor prefsEdit = VerbindungEinstellungenFragment.this.getActivity().getSharedPreferences(VerbindungEinstellungenFragment.SHARED_PREFERENCES, 0).edit();
+                //ShowToast Modus umschalten
+                SharedPreferences.Editor prefsEdit = VerbindungEinstellungenFragment.this.getActivity().getSharedPreferences(VerbindungEinstellungenFragment.SHARED_PREFERENCES, Context.MODE_PRIVATE).edit();
                 prefsEdit.putBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), isChecked);
                 prefsEdit.apply();
             }
@@ -133,12 +117,15 @@ public class VerbindungEinstellungenFragment extends Fragment {
         return view;
     }
 
+    @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
     }
 
+    @Override
     public void onStart() {
         super.onStart();
+        //Gespeicherte Verbindungseinstellungen wiederherstellen
         SharedPreferences prefs = getActivity().getSharedPreferences(SHARED_PREFERENCES, 0);
         this.uriEditText.setText(prefs.getString(SharedPreferenceEnum.HOST.getText(), ""));
         this.pfadEditText.setText(prefs.getString(SharedPreferenceEnum.PFAD.getText(), ""));
@@ -157,52 +144,51 @@ public class VerbindungEinstellungenFragment extends Fragment {
         this.showToastCheckBox.setChecked(prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true));
     }
 
+    @Override
     public void onDetach() {
         super.onDetach();
         this.mListener = null;
     }
 
+    /**
+     * Zeigt den Fragment. Showing wird true gesetzt.
+     */
     public void show() {
         getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).show(this).commit();
         showing = true;
     }
 
+    /**
+     * Versteckt den Fragment. Showing wird false gesetzt
+     */
     public void hide() {
         getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).hide(this).commit();
         showing = false;
     }
 
+    /**
+     * Die Methode führt Aktionen durch die bei einem Verbindungsversuch ausgeführt werden
+     */
     public void acceptConnection() {
-        SharedPreferences prefs = getActivity().getSharedPreferences(SHARED_PREFERENCES, 0);
-        final SharedPreferences.Editor prefsEdit = prefs.edit();
+        final SharedPreferences prefs = getActivity().getSharedPreferences(SHARED_PREFERENCES, Context.MODE_PRIVATE);
         try {
-            DBAsyncTask.getConnectionCheckInstance(getActivity(), new DBAsyncResponse() {
+            //Führt Verbindungscheck aus mit den benutzereingabebedingten Einstellungen
+            DBAsyncTask.getConnectionCheckInstance(getActivity(), new DBAsyncTask.DBAsyncResponse() {
                 public void processFinish(ArrayList<ContentValues> resultArray) {
+                    //Wenn Verbindung erfolgreich war
                     if (resultArray.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText())) {
+                        //Neue funktionsfähige Werte werden gespeichert für künftige Anfragen
+                        SharedPreferences.Editor prefsEdit = prefs.edit();
                         prefsEdit.putString(SharedPreferenceEnum.HOST.getText(), VerbindungEinstellungenFragment.this.uriEditText.getText().toString());
                         prefsEdit.putString(SharedPreferenceEnum.PFAD.getText(), VerbindungEinstellungenFragment.this.pfadEditText.getText().toString());
                         prefsEdit.putString(SharedPreferenceEnum.ROOT_PASSWORT.getText(), VerbindungEinstellungenFragment.this.rootEditText.getText().toString());
                         VerbindungEinstellungenFragment.this.offlineModeCheckBox.setChecked(false);
-                        try {
-                            DBAsyncTask.getInstance(VerbindungEinstellungenFragment.this.getActivity(), new DBAsyncResponse() {
-                                public void processFinish(ArrayList<ContentValues> result) {
-                                    if (result.get(0).getAsString(DBConnectionStatusEnum.CONNECTION_STATUS.getText()).equals(DBConnectionStatusEnum.CONNECTED.getText())) {
-                                        VerbindungEinstellungenFragment.this.rootTextView.setText(result.get(0).getAsString(DBConnectionStatusEnum.DATABASE_USER.getText()) + "-Passwort");
-                                    } else {
-                                        VerbindungEinstellungenFragment.this.rootTextView.setText("Datenbankbenutzer-Passwort");
-                                    }
-                                }
-                            }).execute(AsyncTaskOperationEnum.GET_DATABASE_USER, false);
-                        } catch (MalformedURLException e) {
-                        }
                         prefsEdit.apply();
                         prefsEdit.commit();
                         VerbindungEinstellungenFragment.this.mListener.onConnectionSucces();
-                        return;
-                    }
-                    VerbindungEinstellungenFragment.this.mListener.onConnectionFailed();
+                    } else VerbindungEinstellungenFragment.this.mListener.onConnectionFailed(); //Ansonsten
                 }
-            }, new URL(String.format("%s/%s", new Object[]{this.uriEditText.getText().toString(), this.pfadEditText.getText().toString()})), this.rootEditText.getText().toString()).
+            }, new URL(String.format("%s/%s", this.uriEditText.getText().toString(), this.pfadEditText.getText().toString())), this.rootEditText.getText().toString()).
                     execute(AsyncTaskOperationEnum.CHECK_CONNECTION,
                             prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true));
         } catch (MalformedURLException e) {
@@ -211,14 +197,22 @@ public class VerbindungEinstellungenFragment extends Fragment {
         }
     }
 
+    /**
+     * Die Methode führt Aktionen durch die bei einem Verbindungseinstellungenabbruch ausgeführt werden
+     */
     public void cancelConnection() {
-        SharedPreferences prefs = getActivity().getSharedPreferences(SHARED_PREFERENCES, 0);
+        //Verbindungseinstellungen zurücksetzen
+        SharedPreferences prefs = getActivity().getSharedPreferences(SHARED_PREFERENCES, Context.MODE_PRIVATE);
         this.uriEditText.setText(prefs.getString(SharedPreferenceEnum.HOST.getText(), ""));
         this.pfadEditText.setText(prefs.getString(SharedPreferenceEnum.PFAD.getText(), ""));
         this.rootEditText.setText(prefs.getString(SharedPreferenceEnum.ROOT_PASSWORT.getText(), ""));
         hide();
     }
 
+    /**
+     * Die Funktion gibt an ob der Fragment zurzeit angezeigt wird
+     * @return Die Funktion liefert true zurück wenn der Fragment angezeigt wird
+     */
     public boolean isShowing() {
         return showing;
     }

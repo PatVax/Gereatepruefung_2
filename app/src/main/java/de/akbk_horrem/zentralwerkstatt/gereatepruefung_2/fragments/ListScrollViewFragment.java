@@ -1,10 +1,7 @@
 package de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.fragments;
 
-import android.content.Context;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.support.annotation.Nullable;
 import android.support.v4.app.ListFragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,15 +11,19 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.R;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.adapter.ListAdapter;
 import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.Pruefung;
 
+/**
+ * A simple {@link ListFragment} subclass.
+ */
 public class ListScrollViewFragment extends ListFragment {
     private static final String PRUEFUNG = "pruefung", ENABLED = "enabled";
     private ListView listView;
-    private OnFragmentInteractionListener mListener;
 
-    public interface OnFragmentInteractionListener {
-        void onFragmentInteraction(Uri uri);
-    }
-
+    /**
+     * Erzeugt eine Neue Instanz der Klasse
+     * @param pruefung Die Prüfung das von dem Fragment dargestellt werden soll
+     * @param enabled Gibt an ob die Liste vom Benutzer bearbeitet werden soll
+     * @return Das neuerzeugte Objekt
+     */
     public static ListScrollViewFragment newInstance(Pruefung pruefung, boolean enabled) {
         ListScrollViewFragment fragment = new ListScrollViewFragment();
         Bundle args = new Bundle();
@@ -32,10 +33,7 @@ public class ListScrollViewFragment extends ListFragment {
         return fragment;
     }
 
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_list_scroll_view, container, false);
         this.listView = view.findViewById(R.id.listScrollView);
@@ -43,42 +41,9 @@ public class ListScrollViewFragment extends ListFragment {
         return view;
     }
 
-    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
-        super.onViewStateRestored(savedInstanceState);
-    }
-
-    public void onResume() {
-        super.onResume();
-    }
-
-    public void onButtonPressed(Uri uri) {
-        if (this.mListener != null) {
-            this.mListener.onFragmentInteraction(uri);
-        }
-    }
-
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            this.mListener = (OnFragmentInteractionListener) context;
-            return;
-        }
-        throw new RuntimeException(context.toString() + " must implement OnFragmentInteractionListener");
-    }
-
-    public void onPause() {
-        super.onPause();
-    }
-
-    public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-    }
-
-    public void onDetach() {
-        super.onDetach();
-        this.mListener = null;
-    }
-
+    /**
+     * Markiert alle Ja/Nein Felder in der Liste
+     */
     public void checkAll() {
         ((ListAdapter) this.listView.getAdapter()).checkAll();
     }
@@ -88,10 +53,16 @@ public class ListScrollViewFragment extends ListFragment {
         return this.listView;
     }
 
+    /**
+     * @return Liefert den Zustand der Liste zurück
+     */
     public Parcelable getListState(){
         return getListView().onSaveInstanceState();
     }
 
+    /**
+     * @param listState Setzt den Zustand der Liste
+     */
     public void setListState(Parcelable listState){
         getListView().onRestoreInstanceState(listState);
     }

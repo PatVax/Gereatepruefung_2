@@ -5,107 +5,171 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+
 import java.util.ArrayList;
 
+/**
+ * Die Klasse liefert allgemeine Methoden für den Datenbankzugriff. Es soll für jede Datenbanktabelle eine Klasse geben die von dieser Klasse erbt. Der Konstruktor der abgeleiteten Klasse soll den Konstruktor der Basisklasse aufrufen.
+ */
 public abstract class DBHelper extends SQLiteOpenHelper {
-    protected final int COLUMN_COUNT;
     protected final String TABLE_NAME;
 
-    public DBHelper(Context applicationContext, String name, int columnCount) {
+    /**
+     * Weist die allgemeinen Eigenschaften zu
+     * @param applicationContext Aktueller Context von dem auf die Datenbank zugegriffen wird
+     * @param name Name der Tabelle
+     */
+    protected DBHelper(Context applicationContext, String name) {
         super(applicationContext, name, null, 1);
         this.TABLE_NAME = name;
-        this.COLUMN_COUNT = columnCount;
     }
 
-    public void onCreate(SQLiteDatabase db) {
-    }
-
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-    }
-
-    private void insertRow(ContentValues contents) {
+    /**
+     * Fügt ein Datensatz ein
+     * @param contents ContenValues-Objekt der die erforderlichen Daten enthält. Die Keys müssen den Namen der Columns entsprechen.
+     * @return ID des hinzugefügtes Datensatzes. -1 wenn nicht erfolgreich.
+     */
+    public long insertRow(ContentValues contents) {
         SQLiteDatabase db = getWritableDatabase();
-        db.insert(this.TABLE_NAME, null, contents);
+        long id = db.insert(this.TABLE_NAME, null, contents);
         db.close();
+        return id;
     }
 
+    /**
+     * Fügt Datensätze ein
+     * @param contentValuesArrayList Eine Liste die ContentValues-Objekte enthält, die die erforderlichen Daten enthalten. Die Keys müssen den Namen der Columns entsprechen.
+     * @return true wenn insert erfolgreich war, false wenn nicht
+     */
+    public boolean insertAll(ArrayList<ContentValues> contentValuesArrayList){
+        ArrayList<Long> ids = new ArrayList<>();
+        for(ContentValues contentValues : contentValuesArrayList) {
+            long id = this.insertRow(contentValues);
+            if (id != -1) ids.add(id);
+            else{
+                for(long idToDelete : ids){
+                    deleteFromTable(idToDelete);
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Fragt ein Datensatz ab. Nur für Tabellen wo der Name der ID-Column den Format (id + tabellenname) hat.
+     * @param id Die ID des Datensatzes
+     * @return ContenValues-Objekt mit den Daten über dem Datensatz
+     */
     public ContentValues getRow(long id) {
         SQLiteDatabase db = getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM " + this.TABLE_NAME + " WHERE ID" + this.TABLE_NAME + " = '" + id + "'", null);
+        ContentValues result = getContentValuesFromCursor(db.rawQuery("SELECT * FROM " + this.TABLE_NAME + " WHERE id" + this.TABLE_NAME + " = " + id, null));
         db.close();
-        return getContentValuesFromCursor(cursor);
+        return result;
     }
 
+    /**
+     * Fragt alle Datensätze aus der Tabelle ab
+     * @return Alle Datensätze in der Tabelle als eine Liste von ContentValues-Objekten, die die Datensätze darstellen
+     */
     public ArrayList<ContentValues> getRows() {
         SQLiteDatabase db = getReadableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM " + this.TABLE_NAME, null);
+        ArrayList<ContentValues> result = getContentValuesArrayFromCursor(db.rawQuery("SELECT * FROM " + this.TABLE_NAME, null));
         db.close();
-        return getContentValuesArrayFromCursor(cursor);
+        return result;
     }
 
+    /**
+     * Löscht einen Datensatz aus der Tabelle. Nur für Tabellen wo der Name der ID-Column den Format (id + tabellenname) hat.
+     * @param id ID des zu löschenden Datensatzes
+     */
     public void deleteFromTable(long id) {
         SQLiteDatabase db = getWritableDatabase();
-        db.rawQuery("Delete FROM " + this.TABLE_NAME + " WHERE ID" + this.TABLE_NAME + " = '" + id + "'", null);
+        db.delete(this.TABLE_NAME, "id" + this.TABLE_NAME + "=?", new String[] {id + ""});
+        //db.rawQuery("DELETE FROM " + this.TABLE_NAME + " WHERE id" + this.TABLE_NAME + " = '" + id + "'", null);
         db.close();
     }
 
+    /**
+     * Löscht alle Datensätze aus der Tabelle
+     */
     public void deleteAllFromTable() {
         SQLiteDatabase db = getWritableDatabase();
         db.delete(this.TABLE_NAME, null, null);
-        //db.rawQuery("DELETE FROM " + this.TABLE_NAME, null);
         db.close();
     }
 
+    /**
+     * Fragt die größte vergebene ID in der Tabelle ab
+     * @return Die größte vergebene ID in der Tabelle
+     */
+    protected long getMaxID(){
+        SQLiteDatabase db = getReadableDatabase();
+        long result = getContentValuesFromCursor(db.rawQuery("SELECT MAX(id" + this.TABLE_NAME + ") FROM" + this.TABLE_NAME, null)).getAsLong("id" + this.TABLE_NAME);
+        return result;
+    }
+
+    /**
+     * Wandelt einen Cursor in eine Liste von ContenValues-Objekten, die die Datensätze darstellen
+     * @param cursor Ein Cursor der durch ein SQL-Statement zurückgeliefert wurde
+     * @return Die Umgewandelte Liste
+     */
     protected ArrayList<ContentValues> getContentValuesArrayFromCursor(Cursor cursor) {
         ArrayList<ContentValues> contents = new ArrayList();
         if (cursor.moveToFirst()) {
-            do {
+            do { //Wiederhole
                 ContentValues content = new ContentValues();
-                for (int i = 0; i < this.COLUMN_COUNT; i++) {
+                //Für jede Column wird der Datentyp ermittelt und dem ContentValues-Objekt angefügt mit dem Columnname als Schlüssel
+                for (int i = 0; i < cursor.getColumnCount(); i++) {
                     switch (cursor.getType(i)) {
-                        case 0:
+                        case Cursor.FIELD_TYPE_NULL:
                             content.putNull(cursor.getColumnName(i));
                             break;
-                        case 1:
-                            content.put(cursor.getColumnName(i), Integer.valueOf(cursor.getInt(i)));
+                        case Cursor.FIELD_TYPE_INTEGER:
+                            content.put(cursor.getColumnName(i), cursor.getInt(i));
                             break;
-                        case 2:
-                            content.put(cursor.getColumnName(i), Float.valueOf(cursor.getFloat(i)));
+                        case Cursor.FIELD_TYPE_FLOAT:
+                            content.put(cursor.getColumnName(i), cursor.getFloat(i));
                             break;
-                        case 3:
+                        case Cursor.FIELD_TYPE_STRING:
                             content.put(cursor.getColumnName(i), cursor.getString(i));
                             break;
-                        case 4:
+                        case Cursor.FIELD_TYPE_BLOB:
                             content.put(cursor.getColumnName(i), cursor.getBlob(i));
                             break;
                         default:
                             break;
                     }
                 }
-                contents.add(content);
-            } while (cursor.moveToNext());
-        }
-        return contents;
+                contents.add(content); //ContentValues-Objekt zu der Liste hinzufügen
+            } while (cursor.moveToNext()); //Solange Cursor einen weitere Position annehmen kann
+        }    return contents;
     }
 
+    /**
+     * Wandelt den ersten Eintrag in einem Cursor in ein ContenValues-Objekt, der den Datensatz darstellt
+     * @param cursor Ein Cursor der durch ein SQL-Statement zurückgeliefert wurde
+     * @return Das Umgewandelte ContentValues-Objekt
+     */
     protected ContentValues getContentValuesFromCursor(Cursor cursor) {
         ContentValues content = new ContentValues();
         if (cursor.moveToFirst()) {
-            for (int i = 0; i < this.COLUMN_COUNT; i++) {
+            //Für jede Column wird der Datentyp ermittelt und dem ContentValues-Objekt angefügt mit dem Columnname als Schlüssel
+            for (int i = 0; i < cursor.getColumnCount(); i++) {
                 switch (cursor.getType(i)) {
-                    case 0:
+                    case Cursor.FIELD_TYPE_NULL:
                         content.putNull(cursor.getColumnName(i));
                         break;
-                    case 1:
-                        content.put(cursor.getColumnName(i), Integer.valueOf(cursor.getInt(i)));
+                    case Cursor.FIELD_TYPE_INTEGER:
+                        content.put(cursor.getColumnName(i), cursor.getInt(i));
                         break;
-                    case 2:
-                        content.put(cursor.getColumnName(i), Float.valueOf(cursor.getFloat(i)));
+                    case Cursor.FIELD_TYPE_FLOAT:
+                        content.put(cursor.getColumnName(i), cursor.getFloat(i));
                         break;
-                    case 3:
+                    case Cursor.FIELD_TYPE_STRING:
                         content.put(cursor.getColumnName(i), cursor.getString(i));
                         break;
-                    case 4:
+                    case Cursor.FIELD_TYPE_BLOB:
                         content.put(cursor.getColumnName(i), cursor.getBlob(i));
                         break;
                     default:

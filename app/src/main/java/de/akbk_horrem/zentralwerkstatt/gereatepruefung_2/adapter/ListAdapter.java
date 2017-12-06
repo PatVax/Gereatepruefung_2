@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -27,6 +28,12 @@ public class ListAdapter extends ArrayAdapter<String> {
     Pruefung pruefung;
     boolean enabled;
 
+    /**
+     * Erzeugt ein ListAdapter-Objekt
+     * @param context Aktueller Kontext der App
+     * @param pruefung Die Prüfung die von dem ListAdapter dargestellt werden soll
+     * @param enabled Gibt an ob die Liste veränderbar werden soll
+     */
     public ListAdapter(Context context, Pruefung pruefung, boolean enabled) {
         super(context, -1);
         this.context = context;
@@ -35,21 +42,24 @@ public class ListAdapter extends ArrayAdapter<String> {
     }
 
     @NonNull
+    @Override
     public View getView(final int position, View convertView, final ViewGroup parent) {
         LayoutInflater inflater = (LayoutInflater) this.context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        switch (this.pruefung.getKriterien().get(position).getAsString("anzeigeart")) {
+        //Je nach anzeigeart des Elements das View Einstellen
+        switch (this.pruefung.getAnzeigeartAtPosition(position)) {
             case "h":
                 convertView = inflater.inflate(R.layout.list_item_info, null);
-                ((TextView) convertView.findViewById(R.id.infoTextView)).setText(( this.pruefung.getKriterien().get(position)).getAsString("text"));
+                ((TextView) convertView.findViewById(R.id.infoTextView)).setText(( this.pruefung.getKriteriumAtPosition(position)));
                 return convertView;
             case "b":
                 convertView = inflater.inflate(R.layout.list_item_bool, null);
                 CheckBox boolCheckBox = convertView.findViewById(R.id.boolCheckBox);
-                ((TextView) convertView.findViewById(R.id.boolTextView)).setText(( this.pruefung.getKriterien().get(position)).getAsString("text"));
-                boolCheckBox.setChecked(( this.pruefung.getValues().get(position).getAsBoolean("messwert")));
-                boolCheckBox.setOnClickListener(new OnClickListener() {
-                    public void onClick(View v) {
-                        ListAdapter.this.pruefung.getValues().get(position).put("messwert", !ListAdapter.this.pruefung.getValues().get(position).getAsBoolean("messwert"));
+                ((TextView) convertView.findViewById(R.id.boolTextView)).setText(( this.pruefung.getKriteriumAtPosition(position)));
+                boolCheckBox.setChecked(( this.pruefung.getValuesAtPosition(position).getAsBoolean("messwert")));
+                boolCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                        ListAdapter.this.pruefung.setValueAtPosition(position, isChecked);
                     }
                 });
                 boolCheckBox.setEnabled(this.enabled);
@@ -57,10 +67,12 @@ public class ListAdapter extends ArrayAdapter<String> {
             default:
                 convertView = inflater.inflate(R.layout.list_item_wert, null);
                 final EditText wertEditText = convertView.findViewById(R.id.wertEditText);
-                ((TextView) convertView.findViewById(R.id.wertTextView)).setText(this.pruefung.getKriterien().get(position).getAsString("text"));
-                wertEditText.setHint(( this.pruefung.getKriterien().get(position)).getAsString("anzeigeart"));
-                wertEditText.setText(this.pruefung.getValues().get(position).getAsString("messwert"));
-                wertEditText.setImeOptions(pruefung.getKriterien().get(position + 1).getAsString("anzeigeart").equals("b") || pruefung.getKriterien().get(position + 1).getAsString("anzeigeart").equals("h") ? EditorInfo.IME_ACTION_DONE : EditorInfo.IME_ACTION_NEXT);
+                ((TextView) convertView.findViewById(R.id.wertTextView)).setText(this.pruefung.getKriteriumAtPosition(position));
+                wertEditText.setHint(this.pruefung.getAnzeigeartAtPosition(position));
+                wertEditText.setText(this.pruefung.getValuesAtPosition(position).getAsString("messwert"));
+                wertEditText.setImeOptions(pruefung.getAnzeigeartAtPosition(position + 1).equals("b") ||
+                        pruefung.getAnzeigeartAtPosition(position + 1).equals("h") ?
+                        EditorInfo.IME_ACTION_DONE : EditorInfo.IME_ACTION_NEXT);
                 wertEditText.addTextChangedListener(new TextWatcher() {
                     @Override
                     public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -69,7 +81,7 @@ public class ListAdapter extends ArrayAdapter<String> {
 
                     @Override
                     public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                        ListAdapter.this.pruefung.getValues().get(position).put("messwert", wertEditText.getText().toString());
+                        ListAdapter.this.pruefung.setValueAtPosition(position, wertEditText.getText().toString());
                     }
 
                     @Override
@@ -105,18 +117,20 @@ public class ListAdapter extends ArrayAdapter<String> {
         }
     }
 
+    /**
+     * Markiert alle Ja/Nein Felder in der Liste
+     */
     public void checkAll() {
         for (int i = 0; i < pruefung.getCount(); i++)
-            if(this.pruefung.getKriterien().get(i).getAsString("anzeigeart").equals("b"))
-                this.pruefung.getValues().get(i).put("messwert", true);
+            if(this.pruefung.getAnzeigeartAtPosition(i).equals("b"))
+                this.pruefung.setValueAtPosition(i, true);
         notifyDataSetChanged();
     }
 
-    public Pruefung getPruefung() {
-        return pruefung;
-    }
-
-
+    /**
+     * Bestimmt die Länge der Liste
+     * @return Liefert die Länge der Liste zurück
+     */
     public int getCount() {
         return this.pruefung.getCount();
     }

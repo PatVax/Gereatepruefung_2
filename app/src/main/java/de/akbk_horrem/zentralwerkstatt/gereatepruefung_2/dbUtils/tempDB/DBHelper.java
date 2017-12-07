@@ -82,21 +82,24 @@ public abstract class DBHelper extends SQLiteOpenHelper {
     /**
      * Löscht einen Datensatz aus der Tabelle. Nur für Tabellen wo der Name der ID-Column den Format (id + tabellenname) hat.
      * @param id ID des zu löschenden Datensatzes
+     * @return Anzahl der Datensätzen die gelöscht wurden
      */
-    public void deleteFromTable(long id) {
+    public int deleteFromTable(long id) {
         SQLiteDatabase db = getWritableDatabase();
-        db.delete(this.TABLE_NAME, "id" + this.TABLE_NAME + "=?", new String[] {id + ""});
-        //db.rawQuery("DELETE FROM " + this.TABLE_NAME + " WHERE id" + this.TABLE_NAME + " = '" + id + "'", null);
+        int count = db.delete(this.TABLE_NAME, "id" + this.TABLE_NAME + " = ?", new String[] {id + ""});
         db.close();
+        return count;
     }
 
     /**
      * Löscht alle Datensätze aus der Tabelle
+     * @return Anzahl der Datensätzen die gelöscht wurden
      */
-    public void deleteAllFromTable() {
+    public int deleteAllFromTable() {
         SQLiteDatabase db = getWritableDatabase();
-        db.delete(this.TABLE_NAME, null, null);
+        int count = db.delete(this.TABLE_NAME, null, null);
         db.close();
+        return count;
     }
 
     /**
@@ -105,7 +108,13 @@ public abstract class DBHelper extends SQLiteOpenHelper {
      */
     protected long getMaxID(){
         SQLiteDatabase db = getReadableDatabase();
-        long result = getContentValuesFromCursor(db.rawQuery("SELECT MAX(id" + this.TABLE_NAME + ") FROM" + this.TABLE_NAME, null)).getAsLong("id" + this.TABLE_NAME);
+        long result;
+        try {
+            result = getContentValuesFromCursor(db.rawQuery("SELECT MAX(id" + this.TABLE_NAME + ") AS idpruefung FROM " + this.TABLE_NAME, null)).getAsLong("id" + this.TABLE_NAME);
+        }catch(NullPointerException e){
+            result = -1;
+        }
+        db.close();
         return result;
     }
 

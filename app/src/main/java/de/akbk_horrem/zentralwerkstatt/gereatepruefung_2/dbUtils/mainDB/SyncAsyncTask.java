@@ -30,7 +30,6 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
     private final ProgressDialog DIALOG;
     private DBConnectionStatusEnum dbConnectionStatusEnum;
     private boolean connection = false, dbAsyncStatus = false, password = false, insert = false;
-    DBHelper dbHelper;
     private ArrayList<ContentValues> result = null;
 
     /**
@@ -59,9 +58,11 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
         //Verbindung wird geprüft
         if (checkConnection("Verbindung wird geprüft", 0)) {
 
+            DBHelper dbHelper;
+
             //Benutzerdaten aktualisieren
             ArrayList<ContentValues> result;
-            this.dbHelper = new BenutzerDBHelper(this.CONTEXT);
+            dbHelper = new BenutzerDBHelper(this.CONTEXT);
             ArrayList<ContentValues> benutzerBackup = dbHelper.getRows();
             ArrayList<ContentValues> userList = new ArrayList<>();
             try {
@@ -69,10 +70,10 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
             }catch (SQLException e){
                 return null;
             }
-                this.dbHelper.deleteAllFromTable();
+                dbHelper.deleteAllFromTable();
             for(ContentValues contentValues : result) {
                 userList.add(contentValues);
-                if(-1 == ((BenutzerDBHelper) this.dbHelper).insertRow(contentValues.getAsString("benutzername"),
+                if(-1 == ((BenutzerDBHelper) dbHelper).insertRow(contentValues.getAsString("benutzername"),
                         DBUtils.encodeRootPasswort(contentValues.getAsString("passwort")))) {
                     dbHelper.insertAll(benutzerBackup);
                     return null;
@@ -86,19 +87,19 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
             for(ContentValues userValues : userList){
 
                 String user = userValues.getAsString("benutzername"),
-                        password = userValues.getAsString("passwort");
+                        password = DBUtils.encodeRootPasswort(userValues.getAsString("passwort"));
 
-                this.dbHelper = new PruefungDBHelper(this.CONTEXT);
+                dbHelper = new PruefungDBHelper(this.CONTEXT);
 
-                ArrayList<ContentValues> resultPruefungen = ((PruefungDBHelper) this.dbHelper).getRowsByBenutzer(user);
+                ArrayList<ContentValues> resultPruefungen = ((PruefungDBHelper) dbHelper).getRowsByBenutzer(user);
 
                 //Für jede Prüfung
                 for(ContentValues contentValues : resultPruefungen) {
-                    this.dbHelper = new PruefungDBHelper(this.CONTEXT);
+                    dbHelper = new PruefungDBHelper(this.CONTEXT);
 
                     String geraeteBarcode = contentValues.getAsString("geraete_barcode");
                     long currentID = contentValues.getAsLong("idpruefung");
-                    if(((PruefungDBHelper) this.dbHelper).isPasswordEqualByIDPruefung(currentID, password)){
+                    if(((PruefungDBHelper) dbHelper).isPasswordEqualByIDPruefung(currentID, password)){
                         ArrayList<ContentValues> resultPruefergebnissen;
                         sqlBuilder.append("INSERT INTO pruefungen (geraete_barcode, idbenutzer, datum, bemerkungen) VALUES " +
                                 "('" + geraeteBarcode +
@@ -108,13 +109,14 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
 
                         sqlBuilder.append("INSERT INTO pruefergebnisse VALUES ");
 
-                        this.dbHelper = new PruefergebnisseDBHelper(this.CONTEXT);
+                        dbHelper = new PruefergebnisseDBHelper(this.CONTEXT);
 
-                        resultPruefergebnissen = ((PruefergebnisseDBHelper) this.dbHelper).getRowsByIDPruefung(currentID);
+                        resultPruefergebnissen = ((PruefergebnisseDBHelper) dbHelper).getRowsByIDPruefung(currentID);
 
+                        dbHelper = new KriterienDBHelper(this.CONTEXT);
                         //Für jedes Prüfergebnis
                         for (ContentValues contentValues2 : resultPruefergebnissen){
-                            switch (contentValues2.getAsString("anzeigeart")) {
+                            switch (((KriterienDBHelper)dbHelper).getAnzeigeartByID(contentValues2.getAsLong("idkriterium"))) {
                                 case "b":
                                     sqlBuilder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
                                             geraeteBarcode + "' ORDER BY p.idpruefung DESC LIMIT 1), " +
@@ -145,32 +147,32 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
             ArrayList<ContentValues> kriterienBackup = new KriterienDBHelper(this.CONTEXT).getRows();
 
             try {
-                this.dbHelper = new GeraeteDBHelper(this.CONTEXT);
-                this.dbHelper.deleteAllFromTable();
+                dbHelper = new GeraeteDBHelper(this.CONTEXT);
+                dbHelper.deleteAllFromTable();
                 ArrayList<Long> ids = new ArrayList();
                 result = getData("SELECT g.geraete_barcode, g.idgeraetetyp, g.anschaffungsdatum, g.seriennummer FROM geraete g LEFT JOIN (SELECT MAX(datum) AS datum, geraete_barcode FROM pruefungen GROUP BY geraete_barcode) p ON (g.geraete_barcode = p.geraete_barcode) WHERE DATEDIFF(CURDATE(), p.datum) >= 365 OR p.datum IS NULL", "Geräte werden aktualisiert", 3);
                 for (ContentValues contentValues : result) {
-                    if(-1 == ((GeraeteDBHelper) this.dbHelper).insertRow(contentValues.getAsString("geraete_barcode"), contentValues.getAsInteger("idgeraetetyp"), contentValues.getAsString("anschaffungsdatum"), contentValues.getAsString("seriennummer"))) throw new SQLException();
+                    if(-1 == ((GeraeteDBHelper) dbHelper).insertRow(contentValues.getAsString("geraete_barcode"), contentValues.getAsInteger("idgeraetetyp"), contentValues.getAsString("anschaffungsdatum"), contentValues.getAsString("seriennummer"))) throw new SQLException();
                     if (!ids.contains(contentValues.getAsLong("idgeraetetyp"))) {
                         ids.add(contentValues.getAsLong("idgeraetetyp"));
                     }
                 }
 
-                this.dbHelper = new GeraetetypDBHelper(this.CONTEXT);
-                this.dbHelper.deleteAllFromTable();
+                dbHelper = new GeraetetypDBHelper(this.CONTEXT);
+                dbHelper.deleteAllFromTable();
                 ContentValues contentValues;
                 for (long id : ids) {
                     contentValues = getData("SELECT g.idgeraetetyp, h.bezeichnung AS hersteller, g.headertext, g.footertext, g.bezeichnung FROM geraetetypen g INNER JOIN hersteller h ON (g.idhersteller = h.idhersteller) WHERE idgeraetetyp = " + id, "Gerätetypen werden aktualisiert", 4).get(0);
-                    if(-1 == ((GeraetetypDBHelper) this.dbHelper).insertRow(contentValues.getAsInteger("idgeraetetyp"), contentValues.getAsString("hersteller"), contentValues.getAsString("headertext"), contentValues.getAsString("footertext"), contentValues.getAsString("bezeichnung"))) throw new SQLException();
+                    if(-1 == ((GeraetetypDBHelper) dbHelper).insertRow(contentValues.getAsInteger("idgeraetetyp"), contentValues.getAsString("hersteller"), contentValues.getAsString("headertext"), contentValues.getAsString("footertext"), contentValues.getAsString("bezeichnung"))) throw new SQLException();
 
                 }
 
-                this.dbHelper = new KriterienDBHelper(this.CONTEXT);
-                this.dbHelper.deleteAllFromTable();
+                dbHelper = new KriterienDBHelper(this.CONTEXT);
+                dbHelper.deleteAllFromTable();
                 for (long id : ids) {
                     result = getData("SELECT idkriterium, idgeraetetyp, text, anzeigeart FROM pruefkriterien WHERE status = TRUE AND idgeraetetyp = " + id, "Kriterien werden aktualisiert", 5);
                     for (ContentValues kriterien : result) {
-                        if(-1 == ((KriterienDBHelper) this.dbHelper).insertRow(kriterien.getAsLong("idkriterium"), kriterien.getAsInteger("idgeraetetyp"), kriterien.getAsString("text"), kriterien.getAsString("anzeigeart"))) throw new SQLException();
+                        if(-1 == ((KriterienDBHelper) dbHelper).insertRow(kriterien.getAsLong("idkriterium"), kriterien.getAsInteger("idgeraetetyp"), kriterien.getAsString("text"), kriterien.getAsString("anzeigeart"))) throw new SQLException();
                     }
                 }
             } catch (SQLException e){
@@ -260,7 +262,7 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
                             }
                             SyncAsyncTask.this.dbAsyncStatus = true;
                         }
-                    }, false).executeOnExecutor(AsyncTaskOperationEnum.GET_DATA, false, contentValues.getAsString("sql"));
+                    }, false).executeOnExecutor(AsyncTaskOperationEnum.INSERT_DATA, false, contentValues.getAsString("sql"));
                     break;
             }
         } catch (MalformedURLException e) {

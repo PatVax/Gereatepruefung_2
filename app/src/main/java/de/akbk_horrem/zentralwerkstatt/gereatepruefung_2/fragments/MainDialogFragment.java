@@ -35,7 +35,7 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.mainDB.DBAsyncT
  */
 public class MainDialogFragment extends Fragment {
     private static final String SHARED_PREFERENCES = SharedPreferenceEnum.SHARED_PREFERENCE.getText();
-    private static boolean showing = false; //Wird der Fragment angezeigt?
+    private static boolean showing = true; //Wird der Fragment angezeigt?
     private Button aendernButton;
     private EditText benutzerEditText;
     private OnFragmentInteractionListener mListener;
@@ -141,16 +141,20 @@ public class MainDialogFragment extends Fragment {
      * Zeigt den Fragment. Showing wird true gesetzt.
      */
     public void show() {
-        getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).show(this).commit();
-        showing = true;
+        if(!showing) {
+            getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).show(this).commit();
+            showing = true;
+        }
     }
 
     /**
      * Versteckt den Fragment. Showing wird false gesetzt
      */
     public void hide() {
-        getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).hide(this).commit();
-        showing = false;
+        if(showing) {
+            getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).hide(this).commit();
+            showing = false;
+        }
     }
 
     /**
@@ -169,7 +173,7 @@ public class MainDialogFragment extends Fragment {
         this.aendernButton.setEnabled(false);
         this.aendernButton.setVisibility(View.INVISIBLE);
         this.mListener.onLogout();
-        show();
+        //show();
     }
 
     /**

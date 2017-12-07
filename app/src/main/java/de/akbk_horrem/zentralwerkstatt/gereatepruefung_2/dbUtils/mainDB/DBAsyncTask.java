@@ -389,8 +389,10 @@ public class DBAsyncTask extends AsyncTask<String, ContentValues, ArrayList<Cont
                         for (ContentValues contentValues : DBUtils.jsonArrayToContentValues(line.trim()))
                             resultArray.add(contentValues);
 
-                    } else
+                    } else {
                         result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.CONNECTION_FAILED.getText());
+                        resultArray.add(result);
+                    }
 
                 } catch (IOException|KeyManagementException|NoSuchAlgorithmException|JSONException e) {
                     result.put(DBConnectionStatusEnum.CONNECTION_STATUS.getText(), DBConnectionStatusEnum.TRANSFER_FAILED.getText());

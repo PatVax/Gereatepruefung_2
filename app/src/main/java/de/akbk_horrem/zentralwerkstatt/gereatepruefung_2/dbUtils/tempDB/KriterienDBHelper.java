@@ -15,7 +15,7 @@ public class KriterienDBHelper extends DBHelper {
      * @param applicationContext Context das dieses Objekt erzeugt
      */
     public KriterienDBHelper(Context applicationContext) {
-        super(applicationContext, "kriterien");
+        super(applicationContext, "kriterium");
     }
 
     @Override
@@ -58,5 +58,14 @@ public class KriterienDBHelper extends DBHelper {
         ArrayList<ContentValues> result = getContentValuesArrayFromCursor(db.rawQuery("SELECT * FROM " + this.TABLE_NAME + " WHERE idgeraetetyp = '" + idGeraetetyp + "' ORDER BY idkriterium ASC", null));
         db.close();
         return result;
+    }
+
+    /**
+     * Fragt die Anzeigeart eines Kriteriums
+     * @param idKriterium ID des Kriteriums
+     * @return Ein String der die Anzeigeart darstellt. 'h' für header, 'b' für Ja/Nein-Wert, oder eine anderes String der die Einheit darstellt.
+     */
+    public String getAnzeigeartByID(long idKriterium){
+        return getRow(idKriterium).getAsString("anzeigeart");
     }
 }

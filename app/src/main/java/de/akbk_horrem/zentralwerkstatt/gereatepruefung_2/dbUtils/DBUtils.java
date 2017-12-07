@@ -156,4 +156,14 @@ public class DBUtils {
         PruefungDBAsyncTask.login(context, dbAsyncResponse, benutzer, password);
     }
 
+    /**
+     * Löscht eine Prüfung aus der temporären Datenbank. Das Ergebnis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert(Ein Objekt wenn erfolgreich oder null falls nicht).
+     * @param context Aktuelles Context der App
+     * @param dbAsyncResponse Eine Instanz des {@link PruefungDBAsyncTask.DBAsyncResponse} Interface. Wird genutzt um das Ergebnis zurück zu liefern.
+     * @param idPruefung Die ID der zu löschenden Prüfung
+     */
+    public static void deletePruefung(Activity context, PruefungDBAsyncTask.DBAsyncResponse dbAsyncResponse, long idPruefung){
+        PruefungDBAsyncTask.deletePruefung(context, dbAsyncResponse, idPruefung);
+    }
+
 }

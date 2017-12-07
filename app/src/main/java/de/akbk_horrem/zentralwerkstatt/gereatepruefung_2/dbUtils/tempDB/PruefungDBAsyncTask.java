@@ -73,6 +73,7 @@ public class PruefungDBAsyncTask extends AsyncTask<String, Void, ArrayList<Conte
                 try {
                     pruefung = new PruefungDBHelper(this.context).getRowsByBarcode(args[1]).get(offset);
                     result.addAll(new PruefergebnisseDBHelper(this.context).getRowsByIDPruefung(pruefung.getAsLong("idpruefung")));
+                    result.get(0).putAll(pruefung);
                 }catch(IndexOutOfBoundsException e){
                     cancel(true);
                     while(!isCancelled());
@@ -106,7 +107,7 @@ public class PruefungDBAsyncTask extends AsyncTask<String, Void, ArrayList<Conte
                 result.get(0).putAll(geraet);
                 return result;
             case "insertPruefung": //Prüfung in die Datenbank hinzufügen
-                long id = new PruefungDBHelper(this.context).insertRow(args[1], this.pruefung.getBarcode(), this.pruefung.getDatum(), this.pruefung.getBemerkungen(), args[2]);
+                long id = new PruefungDBHelper(this.context).insertRow(args[1], this.pruefung.getBarcode(), this.pruefung.getDatum(), this.pruefung.getBemerkungen(), DBUtils.encodePasswort(args[2]));
                 if (id == -1){
                     cancel(true);
                     while(!isCancelled());
@@ -124,7 +125,20 @@ public class PruefungDBAsyncTask extends AsyncTask<String, Void, ArrayList<Conte
                     while(!isCancelled());
                     return null;
                 }
-
+                return new ArrayList<>();
+            case "deletePruefung": //Prüfung aus der Datenbank löschen
+                if(new PruefungDBHelper(this.context).deleteFromTable(Long.parseLong(args[1])) == 1)
+                {
+                    if(!(new PruefergebnisseDBHelper(this.context).deleteRowsByIDPruefung(Long.parseLong(args[1])) > 0)){
+                        cancel(true);
+                        while(!isCancelled());
+                        return null;
+                    }
+                }else {
+                    cancel(true);
+                    while(!isCancelled());
+                    return null;
+                }
                 return new ArrayList<>();
             default: return null;
         }
@@ -157,7 +171,7 @@ public class PruefungDBAsyncTask extends AsyncTask<String, Void, ArrayList<Conte
     }
 
     /**
-     * Die Funktion holt alle Informationen aus der temporären Datenbank die zur erzeugung von dem Pruefung Objekt benötigt werden. Das Ergenis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert.
+     * Die Funktion holt alle Informationen aus der temporären Datenbank die zur erzeugung von dem Pruefung Objekt benötigt werden. Das Ergebnis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert.
      *
      * @param context Aktuelles Context der App
      * @param dbAsyncResponse Eine Instanz des {@link PruefungDBAsyncTask.DBAsyncResponse} Interface. Wird genutzt um das Ergebnis zurück zu liefern.
@@ -168,7 +182,7 @@ public class PruefungDBAsyncTask extends AsyncTask<String, Void, ArrayList<Conte
     }
 
     /**
-     * Die Funktion holt alle Informationen aus der temporären Datenbank die zur erzeugung von dem Pruefung Objekt benötigt werden. Darin sind Informationen enthalten die eine fertige Liste in der {@link de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.ListActivity} angezeigt werden können(fertige Prüfung die nicht bearbeitet werden soll) Das Ergenis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert.
+     * Die Funktion holt alle Informationen aus der temporären Datenbank die zur erzeugung von dem Pruefung Objekt benötigt werden. Darin sind Informationen enthalten die eine fertige Liste in der {@link de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.ListActivity} angezeigt werden können(fertige Prüfung die nicht bearbeitet werden soll) Das Ergebnis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert.
      *
      * @param context Aktuelles Context der App
      * @param dbAsyncResponse Eine Instanz des {@link PruefungDBAsyncTask.DBAsyncResponse} Interface. Wird genutzt um das Ergebnis zurück zu liefern.
@@ -180,7 +194,7 @@ public class PruefungDBAsyncTask extends AsyncTask<String, Void, ArrayList<Conte
     }
 
     /**
-     * Fügt eine Prüfung in die temporäre Datenbank ein. Das Ergenis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert(Ein Objekt wenn erfolgreich oder null falls nicht).
+     * Fügt eine Prüfung in die temporäre Datenbank ein. Das Ergebnis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert(Ein Objekt wenn erfolgreich oder null falls nicht).
      *
      * @param context Aktuelles Context der App
      * @param dbAsyncResponse Eine Instanz des {@link PruefungDBAsyncTask.DBAsyncResponse} Interface. Wird genutzt um das Ergebnis zurück zu liefern.
@@ -189,11 +203,11 @@ public class PruefungDBAsyncTask extends AsyncTask<String, Void, ArrayList<Conte
      * @param password Das Passwort des Benutzers
      */
     public static void insertPruefung(Activity context, DBAsyncResponse dbAsyncResponse, @NonNull Pruefung pruefung, @NonNull String benutzer, @NonNull String password){
-        new PruefungDBAsyncTask(context, dbAsyncResponse, pruefung).execute("getPruefung", benutzer, password);
+        new PruefungDBAsyncTask(context, dbAsyncResponse, pruefung).execute("insertPruefung", benutzer, password);
     }
 
     /**
-     * Prüft ob die Anmeldedaten mit der temporären Datenbank übereinstimmen. Das Ergenis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert(Ein Objekt wenn erfolgreich oder null falls nicht).
+     * Prüft ob die Anmeldedaten mit der temporären Datenbank übereinstimmen. Das Ergebnis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert(Ein Objekt wenn erfolgreich oder null falls nicht).
      *
      * @param context Aktuelles Context der App
      * @param dbAsyncResponse Eine Instanz des {@link PruefungDBAsyncTask.DBAsyncResponse} Interface. Wird genutzt um das Ergebnis zurück zu liefern.
@@ -202,5 +216,15 @@ public class PruefungDBAsyncTask extends AsyncTask<String, Void, ArrayList<Conte
      */
     public static void login(Activity context, DBAsyncResponse dbAsyncResponse, @NonNull String benutzer, @NonNull String password){
         new PruefungDBAsyncTask(context, dbAsyncResponse).execute("login", benutzer, password);
+    }
+
+    /**
+     * Löscht eine Prüfung aus der temporären Datenbank. Das Ergebnis wird mit {@link PruefungDBAsyncTask.DBAsyncResponse#processFinish(ArrayList<ContentValues>)} Methode zurückgeliefert(Ein Objekt wenn erfolgreich oder null falls nicht).
+     * @param context Aktuelles Context der App
+     * @param dbAsyncResponse Eine Instanz des {@link PruefungDBAsyncTask.DBAsyncResponse} Interface. Wird genutzt um das Ergebnis zurück zu liefern.
+     * @param idPruefung Die ID der zu löschenden Prüfung
+     */
+    public static void deletePruefung(Activity context, DBAsyncResponse dbAsyncResponse, long idPruefung){
+        new PruefungDBAsyncTask(context, dbAsyncResponse).execute("deletePruefung", idPruefung + "");
     }
 }

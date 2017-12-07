@@ -63,22 +63,30 @@ public class Pruefung implements Parcelable {
         if (contentValuesArray.get(0).containsKey("messwert")) {
             for (ContentValues contentValues : contentValuesArray) {
                 buffer = new ContentValues();
-                buffer.put("idkriterium", contentValues.getAsString("idkriterium"));
-                buffer.put("text", contentValues.getAsString("text"));
-                buffer.put("anzeigeart", contentValues.getAsString("anzeigeart"));
+                buffer.putAll(contentValues);
                 kriterien.add(buffer);
                 buffer = new ContentValues();
                 buffer.put("idkriterium", contentValues.getAsString("idkriterium"));
-                buffer.put("messwert", contentValues.getAsString("messwert"));
+                if(contentValues.getAsString("anzeigeart").equals("b"))
+                    switch(contentValues.getAsString("messwert")) {
+                        case "0":
+                            buffer.put("messwert", false);
+                            break;
+                        case "1":
+                            buffer.put("messwert", true);
+                            break;
+                        default:
+                            buffer.put("messwert", contentValues.getAsString("messwert"));
+                            break;
+                    }
+                else buffer.put("messwert", contentValues.getAsString("messwert"));
                 values.add(buffer);
             }
 
         } else {
             for (ContentValues contentValues : contentValuesArray) {
                 buffer = new ContentValues();
-                buffer.put("idkriterium", contentValues.getAsString("idkriterium"));
-                buffer.put("text", contentValues.getAsString("text"));
-                buffer.put("anzeigeart", contentValues.getAsString("anzeigeart"));
+                buffer.putAll(contentValues);
                 kriterien.add(buffer);
             }
             this.values = getDefaultValues(this.kriterien);
@@ -138,22 +146,31 @@ public class Pruefung implements Parcelable {
         if (contentValuesArray.get(0).containsKey("messwert")) {
             for (ContentValues contentValues : contentValuesArray) {
                 buffer = new ContentValues();
-                buffer.put("idkriterium", contentValues.getAsString("idkriterium"));
-                buffer.put("text", contentValues.getAsString("text"));
-                buffer.put("anzeigeart", contentValues.getAsString("anzeigeart"));
+                buffer.putAll(contentValues);
                 kriterien.add(buffer);
                 buffer = new ContentValues();
                 buffer.put("idkriterium", contentValues.getAsString("idkriterium"));
-                buffer.put("messwert", contentValues.getAsString("messwert"));
+                if(contentValues.getAsString("anzeigeart").equals("b"))
+                    switch(contentValues.getAsString("messwert")) {
+                        case "0":
+                            buffer.put("messwert", false);
+                            break;
+                        case "1":
+                            buffer.put("messwert", true);
+                            break;
+                        default:
+                            buffer.put("messwert", contentValues.getAsString("messwert"));
+                            break;
+                    }
+                else buffer.put("messwert", contentValues.getAsString("messwert"));
+
                 values.add(buffer);
             }
 
         } else {
             for (ContentValues contentValues : contentValuesArray) {
                 buffer = new ContentValues();
-                buffer.put("idkriterium", contentValues.getAsString("idkriterium"));
-                buffer.put("text", contentValues.getAsString("text"));
-                buffer.put("anzeigeart", contentValues.getAsString("anzeigeart"));
+                buffer.putAll(contentValues);
                 kriterien.add(buffer);
             }
             this.values = getDefaultValues(this.kriterien);
@@ -390,6 +407,18 @@ public class Pruefung implements Parcelable {
      */
     public void setBemerkungen(String bemerkungen) {
         this.bemerkungen = bemerkungen;
+    }
+
+    /**
+     * Gibt die übergebene ID der Prüfung zurück
+     * @return Die ID oder -1 falls es sich um eine neue, noch nicht in der Datenbankhinterlegte Prüfung handelt
+     */
+    public long getIDPruefung(){
+        try {
+            return getKriterienAtPosition(0).getAsLong("idpruefung");
+        }catch(NullPointerException e){
+            return -1;
+        }
     }
 
 

@@ -249,12 +249,12 @@ public class MainActivity extends AppCompatActivity implements MainDialogFragmen
 
     @Override
     public void onConnectionFailed() {
+        this.mainDialogFragment.logout();
         this.loginButton.setEnabled(false);
         this.pruefenButton.setEnabled(false);
         this.verbindungButton.setEnabled(true);
         this.scannerButton.setEnabled(false);
         this.syncButton.setEnabled(false);
-        this.mainDialogFragment.logout();
         this.mainDialogFragment.hide();
         this.verbindungEinstellungenFragment.show();
     }
@@ -279,7 +279,7 @@ public class MainActivity extends AppCompatActivity implements MainDialogFragmen
      * @param offlineMode Wenn true werden die Prüfungsdaten aus der Lokalendatenbank gezogen
      * @param showMessage Gibt an ob ein Toast nach dem Vorgang angezeigt werden soll
      */
-    private void fill_list(String barcode, boolean offlineMode, boolean showMessage) {
+    private void fill_list(String barcode, final boolean offlineMode, boolean showMessage) {
         if (offlineMode) {
             try {
 
@@ -295,6 +295,7 @@ public class MainActivity extends AppCompatActivity implements MainDialogFragmen
                             //ListActivity wird gestartet
                             Intent intent = new Intent(MainActivity.this, ListActivity.class);
                             intent.putExtra("contents", pruefung);
+                            intent.putExtra("offline", offlineMode);
                             startActivity(intent);
                         } else{
                             Toast.makeText(MainActivity.this, "Daten nicht hinterlegt", Toast.LENGTH_SHORT);

@@ -57,4 +57,16 @@ public class PruefergebnisseDBHelper extends DBHelper {
         db.close();
         return result;
     }
+
+    /**
+     * Löscht alle Datensätze der bestimmten Prüfung
+     * @param idPruefung Die ID der Prüfung
+     * @return Anzahl der Datensätzen die gelöscht wurden
+     */
+    public int deleteRowsByIDPruefung(long idPruefung){
+        SQLiteDatabase db = getWritableDatabase();
+        int count = db.delete(this.TABLE_NAME, "idpruefung = ?", new String[]{idPruefung + ""});
+        db.close();
+        return count;
+    }
 }

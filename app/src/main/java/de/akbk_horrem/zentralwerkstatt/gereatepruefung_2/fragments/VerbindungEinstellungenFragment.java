@@ -35,7 +35,7 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.mainDB.DBAsyncT
  */
 public class VerbindungEinstellungenFragment extends Fragment {
     private static final String SHARED_PREFERENCES = SharedPreferenceEnum.SHARED_PREFERENCE.getText();
-    private static boolean showing = false; //Wird der Fragment angezeigt?
+    private static boolean showing = true; //Wird der Fragment angezeigt?
     private OnFragmentInteractionListener mListener;
     private CheckBox offlineModeCheckBox;
     private EditText pfadEditText;
@@ -154,16 +154,20 @@ public class VerbindungEinstellungenFragment extends Fragment {
      * Zeigt den Fragment. Showing wird true gesetzt.
      */
     public void show() {
-        getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).show(this).commit();
-        showing = true;
+        if(!showing) {
+            getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).show(this).commit();
+            showing = true;
+        }
     }
 
     /**
      * Versteckt den Fragment. Showing wird false gesetzt
      */
     public void hide() {
-        getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).hide(this).commit();
-        showing = false;
+        if(showing) {
+            getActivity().getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.abc_slide_in_top, R.anim.abc_slide_out_top).hide(this).commit();
+            showing = false;
+        }
     }
 
     /**
@@ -184,7 +188,6 @@ public class VerbindungEinstellungenFragment extends Fragment {
                         prefsEdit.putString(SharedPreferenceEnum.ROOT_PASSWORT.getText(), VerbindungEinstellungenFragment.this.rootEditText.getText().toString());
                         VerbindungEinstellungenFragment.this.offlineModeCheckBox.setChecked(false);
                         prefsEdit.apply();
-                        prefsEdit.commit();
                         VerbindungEinstellungenFragment.this.mListener.onConnectionSucces();
                     } else VerbindungEinstellungenFragment.this.mListener.onConnectionFailed(); //Ansonsten
                 }

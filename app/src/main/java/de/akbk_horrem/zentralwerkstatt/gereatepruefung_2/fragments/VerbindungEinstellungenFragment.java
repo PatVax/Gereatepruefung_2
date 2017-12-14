@@ -35,7 +35,7 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.mainDB.DBAsyncT
  */
 public class VerbindungEinstellungenFragment extends Fragment {
     private static final String SHARED_PREFERENCES = SharedPreferenceEnum.SHARED_PREFERENCE.getText();
-    private static boolean showing = true; //Wird der Fragment angezeigt?
+    private boolean showing = true; //Wird der Fragment angezeigt?
     private OnFragmentInteractionListener mListener;
     private CheckBox offlineModeCheckBox;
     private EditText pfadEditText;

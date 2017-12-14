@@ -298,7 +298,7 @@ public class MainActivity extends AppCompatActivity implements MainDialogFragmen
                             intent.putExtra("offline", offlineMode);
                             startActivity(intent);
                         } else{
-                            Toast.makeText(MainActivity.this, "Daten nicht hinterlegt", Toast.LENGTH_SHORT);
+                            Toast.makeText(MainActivity.this, "Eintrag in der lokalen Datenbank nicht gefunden", Toast.LENGTH_SHORT).show();
                         }
                     }
                 }, barcode);

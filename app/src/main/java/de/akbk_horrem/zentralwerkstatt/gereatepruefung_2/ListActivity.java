@@ -124,7 +124,7 @@ public class ListActivity extends AppCompatActivity {
             menu.getItem(3).setVisible(false);
             menu.getItem(4).setVisible(true);
         }
-        menu.getItem(0).setVisible(pruefungStack.size() > 1);
+        menu.getItem(0).setVisible(pruefungStack.size() > 1 && offlineMode);
         this.menu = menu;
         return true;
     }

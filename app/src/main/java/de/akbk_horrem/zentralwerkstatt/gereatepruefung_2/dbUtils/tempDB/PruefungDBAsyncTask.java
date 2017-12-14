@@ -64,9 +64,13 @@ public class PruefungDBAsyncTask extends AsyncTask<String, Void, ArrayList<Conte
         //Aktion die ausgeführt werden soll
         switch (args[0]){
             case "login": //Einloggen
-                if(new BenutzerDBHelper(this.context).getPasswordByBenutzername(args[1]).equals(DBUtils.encodePasswort(args[2]))) {
-                    return new ArrayList<>();
-                }else return null;
+                try {
+                    if (new BenutzerDBHelper(this.context).getPasswordByBenutzername(args[1]).equals(DBUtils.encodePasswort(args[2]))) {
+                        return new ArrayList<>();
+                    } else return null;
+                }catch(NullPointerException e){
+                    return null;
+                }
             case "getPruefung": //Eine bestehende Prüfung anfordern
                 int offset = Integer.parseInt(args[2]);
                 ContentValues pruefung;

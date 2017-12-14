@@ -2,7 +2,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/buttonBackgroundColor" />
     <item android:top="45dp">
-        <bitmap android:gravity="top|center_horizontal" android:src="@mipmap/fire_icon_stretched" />
+        <bitmap android:gravity="top|center_horizontal" android:src="@mipmap/fire_icon" />
     </item>
     <item>
         <bitmap android:gravity="bottom|center_horizontal" android:src="@mipmap/zentralwerkstatt_splash_text"/>

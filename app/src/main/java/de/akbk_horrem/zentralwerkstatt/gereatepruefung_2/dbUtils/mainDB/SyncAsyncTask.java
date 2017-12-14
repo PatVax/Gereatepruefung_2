@@ -66,7 +66,7 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
             ArrayList<ContentValues> benutzerBackup = dbHelper.getRows();
             ArrayList<ContentValues> userList = new ArrayList<>();
             try {
-                result = getData("SELECT benutzername, passwort FROM benutzer", "Benutzerdaten werden aktualisiert", 1);
+                result = getData("SELECT benutzername, passwort FROM benutzer WHERE aktiv = TRUE", "Benutzerdaten werden aktualisiert", 1);
             }catch (SQLException e){
                 return null;
             }
@@ -104,7 +104,7 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
                         sqlBuilder.append("INSERT INTO pruefungen (geraete_barcode, idbenutzer, datum, bemerkungen) VALUES " +
                                 "('" + geraeteBarcode +
                                 "', (SELECT idbenutzer FROM benutzer WHERE benutzername = '" + user +
-                                "'), CURDATE(), '" +
+                                "'), '" + contentValues.getAsString("datum") + "', '" +
                                 contentValues.getAsString("bemerkungen") + "');");
 
                         sqlBuilder.append("INSERT INTO pruefergebnisse VALUES ");

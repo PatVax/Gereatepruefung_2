@@ -14,8 +14,9 @@ import de.akbk_horrem.zentralwerkstatt.gereatepruefung_2.dbUtils.Pruefung;
  * A simple {@link Fragment} subclass.
  */
 public class ListHeaderFragment extends Fragment {
-    private static final String ARG_PARAMS = "pruefung";
-    private static boolean showing = true;
+    private static final String PRUEFUNG = "pruefung";
+    private static final String SHOWING = "showing";
+    private boolean showing = true;
     private TextView footerTextView;
     private TextView geraetetypTextViewRight;
     private TextView headerTextView;
@@ -29,10 +30,11 @@ public class ListHeaderFragment extends Fragment {
      * @param pruefung Die Prüfung das von dem Fragment dargestellt werden soll
      * @return Das neuerzeugte Objekt
      */
-    public static ListHeaderFragment newInstance(Pruefung pruefung) {
+    public static ListHeaderFragment newInstance(Pruefung pruefung, boolean show) {
         ListHeaderFragment fragment = new ListHeaderFragment();
         Bundle args = new Bundle();
-        args.putParcelable(ARG_PARAMS, pruefung);
+        args.putParcelable(PRUEFUNG, pruefung);
+        args.putBoolean(SHOWING, show);
         fragment.setArguments(args);
         return fragment;
     }
@@ -52,7 +54,8 @@ public class ListHeaderFragment extends Fragment {
         this.datumTextViewRight = view.findViewById(R.id.datumTextViewRight);
         this.headerTextView = view.findViewById(R.id.headerTextView);
         this.footerTextView = view.findViewById(R.id.footerTextView);
-        if(getArguments() != null) updateView((Pruefung)getArguments().getParcelable(ARG_PARAMS));
+        this.showing = getArguments().getBoolean(SHOWING);
+        if(getArguments() != null) updateView((Pruefung)getArguments().getParcelable(PRUEFUNG));
         return view;
     }
 

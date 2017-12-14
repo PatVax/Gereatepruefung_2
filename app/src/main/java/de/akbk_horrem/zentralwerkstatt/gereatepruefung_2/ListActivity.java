@@ -61,7 +61,7 @@ public class ListActivity extends AppCompatActivity {
     public void onBackPressed() { //Eine Prüfung zurückkehren. Letzte Prüfung? Dann Normale Funktion des Backbuttons aufrufen
         if(pruefungStack.size() > 1) {
         pruefungStack.pop();
-        updateActivity();
+        updateActivity(listHeaderFragment.isShowing());
         listScrollViewFragment.setListState(listStates.pop());
     }else super.onBackPressed();
     }
@@ -93,7 +93,7 @@ public class ListActivity extends AppCompatActivity {
             }
         });
         this.offlineMode = getIntent().getBooleanExtra("offline", false);
-        updateActivity();
+        updateActivity(savedInstanceState != null ? savedInstanceState.getBoolean("dialogShowing") : true);
     }
 
     @Override
@@ -159,7 +159,7 @@ public class ListActivity extends AppCompatActivity {
                                     result.remove(0);
                                     pruefungStack.push(new Pruefung(result));
                                     listStates.push(listScrollViewFragment.getListState());
-                                    updateActivity();
+                                    updateActivity(listHeaderFragment.isShowing());
                                 }
                             }
                         }).execute(AsyncTaskOperationEnum.GET_DATA, prefs.getBoolean(SharedPreferenceEnum.SHOW_MESSAGE.getText(), true), sql);
@@ -173,7 +173,7 @@ public class ListActivity extends AppCompatActivity {
                                 if(resultArrayList != null){
                                     pruefungStack.push(new Pruefung(resultArrayList));
                                     listStates.push(listScrollViewFragment.getListState());
-                                    updateActivity();
+                                    updateActivity(listHeaderFragment.isShowing());
                                 }else Toast.makeText(ListActivity.this, "Prüfung lokal nicht hinterlegt", Toast.LENGTH_SHORT);
                             }
                         }, pruefungStack.peek().getBarcode(), pruefungStack.size() - 1);
@@ -182,7 +182,7 @@ public class ListActivity extends AppCompatActivity {
             case R.id.menu_nextList: //Die oberste Prüfung entfernen wenn es nicht die letzte ist
                 if (pruefungStack.size() > 1) {
                     pruefungStack.pop();
-                    updateActivity();
+                    updateActivity(listHeaderFragment.isShowing());
                     listScrollViewFragment.setListState(listStates.pop());
                 }
                 return true;
@@ -193,7 +193,7 @@ public class ListActivity extends AppCompatActivity {
                         public void processFinish(@Nullable ArrayList<ContentValues> resultArrayList) {
                             if(resultArrayList != null){
                                 ListActivity.this.pruefungStack.pop();
-                                updateActivity();
+                                updateActivity(listHeaderFragment.isShowing());
                                 listScrollViewFragment.setListState(listStates.pop());
                             }
                         }
@@ -207,14 +207,17 @@ public class ListActivity extends AppCompatActivity {
     /**
      * Aktualisiert die Activity
      */
-    private void updateActivity() {
+    private void updateActivity(boolean showDialog) {
 
         //Instanziert die Fragments neu mit der aktuell zubetrachtenden Prüfung und ersetzt sie im View
         this.listScrollViewFragment = ListScrollViewFragment.newInstance(this.pruefungStack.peek(), !(pruefungStack.size() > 1));
-        this.listHeaderFragment = ListHeaderFragment.newInstance(this.pruefungStack.peek());
+        this.listHeaderFragment = ListHeaderFragment.newInstance(this.pruefungStack.peek(), showDialog);
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(R.id.listScrollViewFragment, this.listScrollViewFragment);
-        transaction.replace(R.id.listHeaderFragment, this.listHeaderFragment);
+        if(showDialog)
+            transaction.replace(R.id.listHeaderFragment, this.listHeaderFragment);
+        else
+            transaction.replace(R.id.listHeaderFragment, this.listHeaderFragment).hide(this.listHeaderFragment);
         transaction.commitNow();
 
         //Bemerkungen Textfeld setzen
@@ -261,6 +264,7 @@ public class ListActivity extends AppCompatActivity {
         outState.putBoolean("bemerkungen_is_showing", this.bemerkungenEditText.getVisibility() == View.VISIBLE);
         outState.putBoolean("offline", this.offlineMode);
         outState.putBoolean("stopped", this.stopped);
+        outState.putBoolean("dialogShowing", listHeaderFragment.isShowing());
         super.onSaveInstanceState(outState);
     }
 

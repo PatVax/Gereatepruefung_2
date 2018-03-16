@@ -20,7 +20,7 @@ public class PruefergebnisseDBHelper extends DBHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE " + this.TABLE_NAME + " (idpruefung INTEGER, idkriterium INTEGER, messwert TEXT)");
+        db.execSQL("CREATE TABLE " + this.TABLE_NAME + " (idpruefung INTEGER, idkriterium INTEGER, idgeraetetyp INTEGER,  messwert TEXT, PRIMARY KEY(idpruefung, idkriterium))");
     }
 
     @Override
@@ -35,11 +35,12 @@ public class PruefergebnisseDBHelper extends DBHelper {
      * @param messwert Der Wert für das Kriterium in der Prüfung
      * @return ID des hinzugefügtes Datensatzes. -1 wenn nicht erfolgreich.
      */
-    public long insertRow(long idPruefung, long idKriterium, String messwert) {
+    public long insertRow(long idPruefung, long idKriterium, long idGeraetetyp, String messwert) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put("idpruefung", idPruefung);
         values.put("idkriterium", idKriterium);
+        values.put("idgeraetetyp", idGeraetetyp);
         values.put("messwert", messwert);
         long id = db.insert(this.TABLE_NAME, null, values);
         db.close();

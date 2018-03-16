@@ -365,7 +365,8 @@ public class ListActivity extends AppCompatActivity {
             for (int i = 0; i < pruefung.getKriterien().size() - 1; i++) {
                 sqlBuilder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
                         pruefung.getBarcode() + "' ORDER BY p.idpruefung DESC LIMIT 1), " +
-                        (pruefung.getKriterien().get(i)).getAsString("idkriterium") + ", '" +
+                        pruefung.getKriterien().get(i).getAsString("idkriterium") + ", " +
+                        "(SELECT idgeraetetyp FROM geraete WHERE geraete_barcode = '" + pruefung.getBarcode() + "'), '" +
                         (pruefung.getKriterien().get(i).getAsString("anzeigeart").equals("b") ?
                                 (pruefung.getValues().get(i).getAsBoolean("messwert") ? "true" : "false") :
                                 pruefung.getValues().get(i).getAsString("messwert")) + "'),");
@@ -373,7 +374,9 @@ public class ListActivity extends AppCompatActivity {
             sqlBuilder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
                     pruefung.getBarcode() + "' ORDER BY p.idpruefung DESC LIMIT 1), " +
                     (pruefung.getKriterien().get(pruefung.getKriterien().size() - 1)).
-                            getAsString("idkriterium") + ", '" +
+                            getAsString("idkriterium") + ", " +
+                    "(SELECT idgeraetetyp FROM geraete WHERE geraete_barcode = '" +
+                    pruefung.getBarcode() + "'), '" +
                     (pruefung.getKriterien().get(pruefung.getKriterien().size() - 1).
                             getAsString("anzeigeart").equals("b") ?
                             (pruefung.getValues().get(pruefung.getValues().size() - 1).

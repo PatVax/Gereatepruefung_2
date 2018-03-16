@@ -94,18 +94,18 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
                 ArrayList<ContentValues> resultPruefungen = ((PruefungDBHelper) dbHelper).getRowsByBenutzer(user);
 
                 //Für jede Prüfung
-                for(ContentValues contentValues : resultPruefungen) {
+                for(ContentValues pruefungenContentValues : resultPruefungen) {
                     dbHelper = new PruefungDBHelper(this.CONTEXT);
 
-                    String geraeteBarcode = contentValues.getAsString("geraete_barcode");
-                    long currentID = contentValues.getAsLong("idpruefung");
+                    String geraeteBarcode = pruefungenContentValues.getAsString("geraete_barcode");
+                    long currentID = pruefungenContentValues.getAsLong("idpruefung");
                     if(((PruefungDBHelper) dbHelper).isPasswordEqualByIDPruefung(currentID, password)){
                         ArrayList<ContentValues> resultPruefergebnissen;
                         sqlBuilder.append("INSERT INTO pruefungen (geraete_barcode, idbenutzer, datum, bemerkungen) VALUES " +
                                 "('" + geraeteBarcode +
                                 "', (SELECT idbenutzer FROM benutzer WHERE benutzername = '" + user +
-                                "'), '" + contentValues.getAsString("datum") + "', '" +
-                                contentValues.getAsString("bemerkungen") + "');");
+                                "'), '" + pruefungenContentValues.getAsString("datum") + "', '" +
+                                pruefungenContentValues.getAsString("bemerkungen") + "');");
 
                         sqlBuilder.append("INSERT INTO pruefergebnisse VALUES ");
 
@@ -114,18 +114,19 @@ public class SyncAsyncTask extends AsyncTask<Void, ContentValues, Void> {
                         resultPruefergebnissen = ((PruefergebnisseDBHelper) dbHelper).getRowsByIDPruefung(currentID);
 
                         dbHelper = new KriterienDBHelper(this.CONTEXT);
+
                         //Für jedes Prüfergebnis
-                        for (ContentValues contentValues2 : resultPruefergebnissen){
-                            switch (((KriterienDBHelper)dbHelper).getAnzeigeartByID(contentValues2.getAsLong("idkriterium"))) {
+                        for (ContentValues pruefergebnissenContentValues : resultPruefergebnissen){
+                            switch (((KriterienDBHelper)dbHelper).getAnzeigeartByID(pruefergebnissenContentValues.getAsLong("idkriterium"))) {
                                 case "b":
                                     sqlBuilder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
                                             geraeteBarcode + "' ORDER BY p.idpruefung DESC LIMIT 1), " +
-                                            contentValues2.getAsString("idkriterium") + ", '" + (contentValues2.getAsBoolean("messwert") ? "true" : "false") + "'),");
+                                            pruefergebnissenContentValues.getAsString("idkriterium") + ", " + "(SELECT g.idgeraetetyp FROM geraete g WHERE g.geraete_barcode = '" + geraeteBarcode + "'), '" + (pruefergebnissenContentValues.getAsBoolean("messwert") ? "true" : "false") + "'),");
                                     break;
                                 default:
                                     sqlBuilder.append("((SELECT p.idpruefung FROM pruefungen p WHERE p.geraete_barcode = '" +
                                             geraeteBarcode + "' ORDER BY p.idpruefung DESC LIMIT 1), " +
-                                            contentValues2.getAsString("idkriterium") + ", '" + contentValues2.getAsString("messwert") + "'),");
+                                            pruefergebnissenContentValues.getAsString("idkriterium") + ", " + "(SELECT g.idgeraetetyp FROM geraete g WHERE g.geraete_barcode = '" + geraeteBarcode + "'), '" + pruefergebnissenContentValues.getAsString("messwert") + "'),");
                                     break;
                             }
                         }

@@ -20,7 +20,7 @@ public class KriterienDBHelper extends DBHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE " + this.TABLE_NAME + " (idkriterium INTEGER PRIMARY KEY, idgeraetetyp INTEGER, text TEXT, anzeigeart INTEGER)");
+        db.execSQL("CREATE TABLE " + this.TABLE_NAME + " (idkriterium INTEGER, idgeraetetyp INTEGER, text TEXT, anzeigeart INTEGER, PRIMARY KEY(idkriterium, idgeraetetyp))");
     }
 
     @Override
